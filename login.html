@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MeuCaixa">
+<meta name="theme-color" content="#6B3520">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>Meu Caixa Digital — Entrar</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{font-family:'DM Sans',sans-serif;overflow-y:auto}
+
+body{
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 10%, rgba(160,80,40,.35) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 80% 90%, rgba(100,30,10,.4) 0%, transparent 60%),
+    linear-gradient(160deg,#6B3520 0%,#4A2218 45%,#3A1A12 100%);
+}
+.page-wrapper{
+  display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+  min-height:100vh;padding:40px 16px;
+  position:relative;z-index:1;
+}
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
+  opacity:.6;
+}
+
+/* ── BRAND ── */
+.brand{position:relative;z-index:1;text-align:center;margin-bottom:24px}
+.brand-icon{display:inline-flex;align-items:center;justify-content:center;width:60px;height:60px;border-radius:16px;background:rgba(212,163,115,.15);border:1.5px solid rgba(212,163,115,.3);margin-bottom:12px}
+.brand h1{font-family:'DM Serif Display',serif;font-size:36px;font-weight:400;background:linear-gradient(135deg,#fff 30%,#D4A373 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-.02em}
+.brand p{color:rgba(255,255,255,.45);font-size:11px;letter-spacing:.07em;text-transform:uppercase;margin-top:4px}
+
+/* ── CARD ── */
+.card{position:relative;z-index:1;background:#fff;border-radius:24px;width:100%;max-width:480px;box-shadow:0 24px 80px rgba(0,0,0,.4),0 0 0 1px rgba(255,255,255,.08);overflow:hidden}
+
+/* ── TABS ── */
+.tabs{display:flex;border-bottom:1.5px solid rgba(0,0,0,.07)}
+.tab{flex:1;padding:16px;font-size:14px;font-weight:600;text-align:center;cursor:pointer;border:none;background:none;font-family:inherit;color:#bbb;transition:all .2s;border-bottom:2px solid transparent;margin-bottom:-1.5px}
+.tab.active{color:#4E342E;border-bottom-color:#4E342E}
+
+/* ── FORM ── */
+.form-body{padding:28px 28px 24px}
+.field{margin-bottom:15px}
+label.lbl{display:block;font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px}
+.input{width:100%;padding:11px 14px;border:1.5px solid rgba(0,0,0,.1);border-radius:10px;font-size:14px;font-family:inherit;color:#3B2C1E;background:#fff;outline:none;transition:border-color .18s}
+.input:focus{border-color:#F0A335}
+.input::placeholder{color:#ccc}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* ── MENSAGENS ── */
+.msg{padding:10px 14px;border-radius:10px;font-size:13px;font-weight:500;margin-bottom:14px;display:none;line-height:1.5}
+.msg.error{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca}
+.msg.success{background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0}
+.msg.info{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
+.msg.show{display:block}
+
+/* ── PLANOS ── */
+.planos-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
+.plano-card{border:2px solid rgba(0,0,0,.1);border-radius:14px;padding:14px 12px;cursor:pointer;text-align:center;transition:all .2s;background:#fafafa;position:relative}
+.plano-card.active{border-color:#6B3520;background:rgba(107,53,32,.05)}
+.plano-card .plano-nome{font-size:13px;font-weight:700;color:#3B2C1E;margin-bottom:3px}
+.plano-card .plano-preco{font-size:18px;font-weight:700;color:#6B3520}
+.plano-card .plano-preco span{font-size:11px;font-weight:500;color:#999}
+.plano-card .plano-desc{font-size:11px;color:#aaa;margin-top:4px;line-height:1.4}
+.plano-badge{position:absolute;top:-1px;right:-1px;background:#F0A335;color:#fff;font-size:9px;font-weight:700;padding:3px 7px;border-radius:0 12px 0 8px;letter-spacing:.04em;text-transform:uppercase}
+
+/* ── BOTÕES ── */
+.btn-main{width:100%;padding:14px;border-radius:12px;border:none;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .15s,transform .1s;letter-spacing:-.01em;margin-top:6px}
+.btn-main:active{transform:scale(.98)}
+.btn-main.primary{background:linear-gradient(135deg,#6B3520,#4A2218);color:#fff}
+.btn-main.primary:hover{opacity:.9}
+.btn-main.secondary{background:#f5f0ee;color:#6B3520}
+.btn-main:disabled{opacity:.6;cursor:not-allowed;transform:none}
+
+/* ── LINKS ── */
+.forgot{text-align:center;margin-top:14px;font-size:13px;color:#bbb}
+.forgot a{color:#6B3520;font-weight:600;cursor:pointer;text-decoration:none}
+.footer{position:relative;z-index:1;margin-top:20px;text-align:center;color:rgba(255,255,255,.25);font-size:11px;letter-spacing:.04em}
+
+/* ── SPINNER ── */
+.spinner{width:16px;height:16px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block;vertical-align:middle;margin-right:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.divider{border:none;border-top:1.5px solid rgba(0,0,0,.07);margin:16px 0}
+
+/* ── TELA IOS ── */
+#tela-ios{
+  position:fixed;inset:0;z-index:9999;
+  background:linear-gradient(160deg,#6B3520 0%,#3A1A12 100%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:32px 24px;text-align:center;
+}
+#tela-ios .ios-icon{width:80px;height:80px;border-radius:20px;background:rgba(212,163,115,.15);border:2px solid rgba(212,163,115,.3);display:flex;align-items:center;justify-content:center;margin:0 auto 24px}
+#tela-ios h2{font-family:'DM Serif Display',serif;color:#fff;font-size:26px;font-weight:400;margin-bottom:12px}
+#tela-ios p{color:rgba(255,255,255,.65);font-size:14px;line-height:1.7;max-width:300px}
+#tela-ios .ios-steps{margin:24px 0;text-align:left;background:rgba(255,255,255,.08);border-radius:16px;padding:16px 20px}
+#tela-ios .ios-step{display:flex;align-items:center;gap:12px;padding:8px 0;color:rgba(255,255,255,.8);font-size:13px}
+#tela-ios .ios-step:not(:last-child){border-bottom:1px solid rgba(255,255,255,.08)}
+#tela-ios .step-num{width:24px;height:24px;border-radius:50%;background:#F0A335;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+
+/* ── TELA VERIFICAÇÃO ── */
+#tela-verificacao{display:none}
+#tela-verificacao .verif-icon{text-align:center;padding:28px 0 16px;font-size:48px}
+#tela-verificacao h3{text-align:center;font-family:'DM Serif Display',serif;font-size:22px;color:#3B2C1E;margin-bottom:8px}
+#tela-verificacao p{text-align:center;font-size:13px;color:#999;line-height:1.6;margin-bottom:20px;padding:0 8px}
+#tela-verificacao .email-destaque{font-weight:700;color:#6B3520}
+
+/* ── BANNER MANUTENÇÃO ── */
+#banner-manutencao{display:none;position:relative;z-index:2;width:100%;max-width:480px;background:#7F1D1D;color:#fff;border-radius:12px;padding:12px 16px;margin-bottom:16px;font-size:13px;line-height:1.5;text-align:center}
+</style>
+</head>
+<body>
+
+<!-- TELA DE INSTALAÇÃO iOS -->
+<div id="tela-ios" style="display:none">
+  <div class="ios-icon">
+    <svg width="40" height="40" viewBox="0 0 64 64" fill="none">
+      <rect x="8" y="24" width="48" height="28" rx="6" stroke="#D4A373" stroke-width="3" fill="none"/>
+      <rect x="20" y="16" width="24" height="10" rx="4" stroke="#D4A373" stroke-width="2.5" fill="none"/>
+      <circle cx="32" cy="38" r="6" fill="#D4A373"/>
+    </svg>
+  </div>
+  <h2>Instale o MeuCaixa</h2>
+  <p>Para a melhor experiência no iPhone, adicione à Tela de Início:</p>
+  <div class="ios-steps">
+    <div class="ios-step"><div class="step-num">1</div>Toque no botão <strong style="color:#F0A335;margin:0 4px">Compartilhar</strong> (□↑) na barra do Safari</div>
+    <div class="ios-step"><div class="step-num">2</div>Role para baixo e toque em <strong style="color:#F0A335;margin:0 4px">Adicionar à Tela de Início</strong></div>
+    <div class="ios-step"><div class="step-num">3</div>Toque em <strong style="color:#F0A335;margin:0 4px">Adicionar</strong> no canto superior direito</div>
+  </div>
+  <button class="btn-main primary" onclick="fecharTelaiOS()" style="max-width:300px">Entendido, continuar →</button>
+</div>
+
+<!-- WRAPPER (centraliza e permite scroll natural) -->
+<div class="page-wrapper">
+
+<!-- BANNER MANUTENÇÃO -->
+<div id="banner-manutencao"></div>
+
+<!-- BRAND -->
+<div class="brand">
+  <div class="brand-icon">
+    <svg width="30" height="30" viewBox="0 0 64 64" fill="none">
+      <rect x="8" y="24" width="48" height="28" rx="6" stroke="#D4A373" stroke-width="3" fill="none"/>
+      <rect x="20" y="16" width="24" height="10" rx="4" stroke="#D4A373" stroke-width="2.5" fill="none"/>
+      <circle cx="32" cy="38" r="6" fill="#D4A373"/>
+      <line x1="22" y1="38" x2="25" y2="38" stroke="#D4A373" stroke-width="3" stroke-linecap="round"/>
+      <line x1="39" y1="38" x2="42" y2="38" stroke="#D4A373" stroke-width="3" stroke-linecap="round"/>
+    </svg>
+  </div>
+  <h1>Meu Caixa Digital</h1>
+  <p>FSG Soluções Tecnológicas e Serviços</p>
+</div>
+
+<!-- CARD PRINCIPAL -->
+<div class="card">
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('login')" id="tab-login">Entrar</button>
+    <button class="tab" onclick="switchTab('cadastro')" id="tab-cadastro">Criar Conta</button>
+  </div>
+
+  <!-- ── ABA LOGIN ── -->
+  <div id="form-login" class="form-body">
+    <div class="msg" id="login-msg"></div>
+    <div class="field">
+      <label class="lbl">E-mail</label>
+      <input class="input" type="email" id="login-email" placeholder="seu@email.com" autocomplete="email"/>
+    </div>
+    <div class="field">
+      <label class="lbl">Senha</label>
+      <input class="input" type="password" id="login-senha" placeholder="••••••••" autocomplete="current-password"/>
+    </div>
+    <button class="btn-main primary" onclick="doLogin()" id="btn-login">Entrar no Meu Caixa</button>
+    <p class="forgot">Esqueceu a senha? <a onclick="doRecuperar()">Recuperar acesso</a></p>
+  </div>
+
+  <!-- ── ABA CADASTRO ── -->
+  <div id="form-cadastro" class="form-body" style="display:none">
+    <div class="msg" id="cad-msg"></div>
+    <div class="field-row">
+      <div class="field">
+        <label class="lbl">Nome Completo *</label>
+        <input class="input" id="cad-nome" placeholder="Seu nome completo"/>
+      </div>
+      <div class="field">
+        <label class="lbl">Nome da Empresa *</label>
+        <input class="input" id="cad-empresa" placeholder="Nome da sua loja"/>
+      </div>
+    </div>
+    <div class="field">
+      <label class="lbl">E-mail *</label>
+      <input class="input" type="email" id="cad-email" placeholder="seu@email.com"/>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label class="lbl">Senha *</label>
+        <input class="input" type="password" id="cad-senha" placeholder="Mín. 6 caracteres"/>
+      </div>
+      <div class="field">
+        <label class="lbl">Confirmar Senha *</label>
+        <input class="input" type="password" id="cad-conf" placeholder="Repita a senha"/>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label class="lbl">Telefone * <span style="color:#e55">obrigatório</span></label>
+        <input class="input" id="cad-tel" placeholder="(00) 9 0000-0000" maxlength="16"/>
+      </div>
+      <div class="field">
+        <label class="lbl">CPF ou CNPJ *</label>
+        <input class="input" id="cad-cpfcnpj" placeholder="CPF ou CNPJ" maxlength="18"/>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="field">
+      <label class="lbl" style="margin-bottom:10px">Escolha seu Plano *</label>
+      <div class="planos-grid">
+        <div class="plano-card active" id="plano-standard" onclick="selectPlano('standard')">
+          <div class="plano-nome">Standard</div>
+          <div class="plano-preco">R$54,90<span>/mês</span></div>
+          <div class="plano-desc">Ideal para pequenas lojas</div>
+        </div>
+        <div class="plano-card" id="plano-profissional" onclick="selectPlano('profissional')">
+          <div class="plano-badge">Popular</div>
+          <div class="plano-nome">Profissional</div>
+          <div class="plano-preco">R$89,90<span>/mês</span></div>
+          <div class="plano-desc">Múltiplos operadores e relatórios</div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-main primary" onclick="doCadastro()" id="btn-cad" style="margin-top:16px">Criar Conta e Começar Trial</button>
+    <p class="forgot" style="margin-top:10px">Já tem conta? <a onclick="switchTab('login')">Fazer login</a></p>
+  </div>
+
+  <!-- ── TELA VERIFICAÇÃO DE E-MAIL ── -->
+  <div id="tela-verificacao" class="form-body">
+    <div class="verif-icon">📧</div>
+    <h3>Confirme seu e-mail</h3>
+    <p>Enviamos um link para <span class="email-destaque" id="verif-email"></span>.<br>Confirme para iniciar seu trial de <strong>30 dias grátis</strong>.</p>
+    <div class="msg" id="verif-msg"></div>
+    <button class="btn-main primary" onclick="doVerificarEmail()" id="btn-verificar">Já confirmei →</button>
+    <button class="btn-main secondary" onclick="doReenviar()" id="btn-reenviar" style="margin-top:10px">Reenviar e-mail</button>
+    <p class="forgot" style="margin-top:14px"><a onclick="voltarParaLogin()">← Voltar ao login</a></p>
+  </div>
+
+</div>
+
+<div class="footer">Meu Caixa Digital · meucaixa.tec.br · FSG Soluções Tecnológicas e Serviços</div>
+
+</div><!-- /page-wrapper -->
+
+<script type="module">
+import {
+  login,
+  cadastrarEmpresa,
+  recuperarSenha,
+  reenviarVerificacao,
+  verificarEmailConfirmado,
+} from "./auth.js";
+
+import { db } from "./firebase-config.js";
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// ── ESTADO LOCAL ────────────────────────────────────────────────────
+let planoSelecionado    = "standard";
+let _emailVerificacao   = "";
+let _senhaVerificacao   = "";
+
+// ── EXPOR FUNÇÕES AO HTML ───────────────────────────────────────────
+window.switchTab         = switchTab;
+window.selectPlano       = selectPlano;
+window.doLogin           = doLogin;
+window.doCadastro        = doCadastro;
+window.doRecuperar       = doRecuperar;
+window.doVerificarEmail  = doVerificarEmail;
+window.doReenviar        = doReenviar;
+window.voltarParaLogin   = voltarParaLogin;
+window.fecharTelaiOS     = fecharTelaiOS;
+
+// ── INICIALIZAÇÃO ───────────────────────────────────────────────────
+window.addEventListener("load", () => {
+  // Se já existe sessão válida em cache, redirecionar sem re-login
+  try {
+    const sessaoCache = JSON.parse(localStorage.getItem("mc_sessao") || "null");
+    if (sessaoCache && sessaoCache.uid) {
+      window.location.href = sessaoCache.superAdmin ? "admin-fsg.html" : "app.html";
+      return;
+    }
+  } catch { /* sessão inválida — continua para login */ }
+
+  verificarInstalacaoiOS();
+  carregarConfiguracaoSistema();
+  aplicarMascaras();
+});
+
+// ── iOS INSTALAÇÃO ──────────────────────────────────────────────────
+function verificarInstalacaoiOS() {
+  const isIOS       = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isInstalled = window.navigator.standalone === true;
+  const jaViu       = localStorage.getItem("mc_instalacao_vista");
+
+  if (isIOS && !isInstalled && !jaViu) {
+    document.getElementById("tela-ios").style.display = "flex";
+  }
+}
+
+function fecharTelaiOS() {
+  localStorage.setItem("mc_instalacao_vista", "1");
+  document.getElementById("tela-ios").style.display = "none";
+}
+
+// ── CONFIGURAÇÃO DO SISTEMA (MANUTENÇÃO) ────────────────────────────
+async function carregarConfiguracaoSistema() {
+  try {
+    const snap = await getDoc(doc(db, "sistema", "config"));
+    if (!snap.exists()) return;
+    const config = snap.data();
+    if (config.manutencaoAtiva) {
+      const banner = document.getElementById("banner-manutencao");
+      banner.textContent = config.manutencaoTexto || "Sistema em manutenção. Voltamos em breve.";
+      banner.style.display = "block";
+    }
+  } catch {
+    // Falha silenciosa — funciona com cache offline
+  }
+}
+
+// ── NAVEGAÇÃO ABAS ──────────────────────────────────────────────────
+function switchTab(tab) {
+  document.getElementById("form-login").style.display    = tab === "login"    ? "" : "none";
+  document.getElementById("form-cadastro").style.display = tab === "cadastro" ? "" : "none";
+  document.getElementById("tela-verificacao").style.display = "none";
+  document.getElementById("tab-login").classList.toggle("active", tab === "login");
+  document.getElementById("tab-cadastro").classList.toggle("active", tab === "cadastro");
+}
+
+// ── SELEÇÃO DE PLANO ────────────────────────────────────────────────
+function selectPlano(plano) {
+  planoSelecionado = plano;
+  document.getElementById("plano-standard").classList.toggle("active", plano === "standard");
+  document.getElementById("plano-profissional").classList.toggle("active", plano === "profissional");
+}
+
+// ── MÁSCARAS ─────────────────────────────────────────────────────────
+function aplicarMascaras() {
+  // Telefone
+  document.getElementById("cad-tel").addEventListener("input", function() {
+    let v = this.value.replace(/\D/g, "").slice(0, 11);
+    if (v.length <= 10) {
+      v = v.replace(/^(\d{2})(\d{4})(\d{0,4})/, "($1) $2-$3");
+    } else {
+      v = v.replace(/^(\d{2})(\d{5})(\d{0,4})/, "($1) $2-$3");
+    }
+    this.value = v;
+  });
+
+  // CPF/CNPJ
+  document.getElementById("cad-cpfcnpj").addEventListener("input", function() {
+    let v = this.value.replace(/\D/g, "");
+    if (v.length <= 11) {
+      v = v.replace(/^(\d{3})(\d{3})(\d{3})(\d{0,2})/, "$1.$2.$3-$4").replace(/-$/, "");
+    } else {
+      v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2})/, "$1.$2.$3/$4-$5").replace(/-$/, "");
+    }
+    this.value = v;
+  });
+}
+
+// ── LOGIN ────────────────────────────────────────────────────────────
+async function doLogin() {
+  const email = document.getElementById("login-email").value.trim();
+  const senha = document.getElementById("login-senha").value;
+  const msg   = document.getElementById("login-msg");
+  const btn   = document.getElementById("btn-login");
+
+  clearMsg(msg);
+  if (!email || !senha) { showMsg(msg, "error", "Preencha e-mail e senha."); return; }
+
+  btn.innerHTML = '<span class="spinner"></span>Verificando…';
+  btn.disabled  = true;
+
+  const res = await login(email, senha);
+
+  if (res.ok) {
+    showMsg(msg, "success", "Login realizado! Redirecionando…");
+    setTimeout(() => window.location.href = res.redirecionar || "app.html", 800);
+    return;
+  }
+
+  // E-mail não verificado: mostrar tela de verificação
+  if (res.erro === "EMAIL_NAO_VERIFICADO") {
+    _emailVerificacao = res.email || email;
+    _senhaVerificacao = senha;
+    document.getElementById("verif-email").textContent = _emailVerificacao;
+    document.getElementById("form-login").style.display = "none";
+    document.getElementById("tela-verificacao").style.display = "block";
+    btn.innerHTML = "Entrar no Meu Caixa";
+    btn.disabled  = false;
+    return;
+  }
+
+  showMsg(msg, "error", res.erro);
+  btn.innerHTML = "Entrar no Meu Caixa";
+  btn.disabled  = false;
+}
+
+// ── CADASTRO ─────────────────────────────────────────────────────────
+async function doCadastro() {
+  const nome      = document.getElementById("cad-nome").value.trim();
+  const empresa   = document.getElementById("cad-empresa").value.trim();
+  const email     = document.getElementById("cad-email").value.trim();
+  const senha     = document.getElementById("cad-senha").value;
+  const conf      = document.getElementById("cad-conf").value;
+  const tel       = document.getElementById("cad-tel").value.trim();
+  const cpfcnpj   = document.getElementById("cad-cpfcnpj").value.trim();
+  const msg       = document.getElementById("cad-msg");
+  const btn       = document.getElementById("btn-cad");
+
+  clearMsg(msg);
+
+  // Validações
+  if (!nome || !empresa || !email || !senha || !tel || !cpfcnpj) {
+    showMsg(msg, "error", "Preencha todos os campos obrigatórios (*)."); return;
+  }
+  if (senha.length < 6) {
+    showMsg(msg, "error", "A senha deve ter no mínimo 6 caracteres."); return;
+  }
+  if (senha !== conf) {
+    showMsg(msg, "error", "As senhas não coincidem."); return;
+  }
+  const telLimpo = tel.replace(/\D/g, "");
+  if (telLimpo.length < 10) {
+    showMsg(msg, "error", "Telefone inválido. Use o formato (00) 9 0000-0000."); return;
+  }
+  const cpfLimpo = cpfcnpj.replace(/\D/g, "");
+  if (cpfLimpo.length !== 11 && cpfLimpo.length !== 14) {
+    showMsg(msg, "error", "CPF deve ter 11 dígitos ou CNPJ deve ter 14 dígitos."); return;
+  }
+
+  btn.innerHTML = '<span class="spinner"></span>Criando conta…';
+  btn.disabled  = true;
+
+  const res = await cadastrarEmpresa({
+    nome,
+    email,
+    senha,
+    nomeEmpresa: empresa,
+    telefone:    tel,
+    cpfCnpj:     cpfcnpj,
+    plano:       planoSelecionado,
+  });
+
+  if (res.ok) {
+    _emailVerificacao = email;
+    _senhaVerificacao = senha;
+    document.getElementById("verif-email").textContent = email;
+    document.getElementById("form-cadastro").style.display = "none";
+    document.getElementById("tela-verificacao").style.display = "block";
+    return;
+  }
+
+  showMsg(msg, "error", res.erro);
+  btn.innerHTML = "Criar Conta e Começar Trial";
+  btn.disabled  = false;
+}
+
+// ── VERIFICAR E-MAIL ─────────────────────────────────────────────────
+async function doVerificarEmail() {
+  const msg = document.getElementById("verif-msg");
+  const btn = document.getElementById("btn-verificar");
+  clearMsg(msg);
+
+  btn.innerHTML = '<span class="spinner"></span>Verificando…';
+  btn.disabled  = true;
+
+  const res = await verificarEmailConfirmado(_emailVerificacao, _senhaVerificacao);
+
+  if (res.ok) {
+    showMsg(msg, "success", "E-mail confirmado! Redirecionando…");
+    setTimeout(() => window.location.href = "app.html", 1000);
+    return;
+  }
+
+  showMsg(msg, "error", res.erro || "E-mail ainda não confirmado. Verifique sua caixa de entrada.");
+  btn.innerHTML = "Já confirmei →";
+  btn.disabled  = false;
+}
+
+// ── REENVIAR VERIFICAÇÃO ─────────────────────────────────────────────
+async function doReenviar() {
+  const msg = document.getElementById("verif-msg");
+  const btn = document.getElementById("btn-reenviar");
+  clearMsg(msg);
+
+  btn.innerHTML = '<span class="spinner"></span>Enviando…';
+  btn.disabled  = true;
+
+  const res = await reenviarVerificacao(_emailVerificacao, _senhaVerificacao);
+
+  if (res.ok) {
+    showMsg(msg, "success", "E-mail reenviado com sucesso. Verifique sua caixa de entrada.");
+  } else {
+    showMsg(msg, "error", res.erro);
+  }
+
+  btn.innerHTML = "Reenviar e-mail";
+  btn.disabled  = false;
+}
+
+// ── RECUPERAR SENHA ──────────────────────────────────────────────────
+async function doRecuperar() {
+  const email = document.getElementById("login-email").value.trim();
+  const msg   = document.getElementById("login-msg");
+  clearMsg(msg);
+
+  if (!email) {
+    showMsg(msg, "error", "Digite seu e-mail no campo acima para recuperar a senha."); return;
+  }
+
+  const res = await recuperarSenha(email);
+  if (res.ok) {
+    showMsg(msg, "success", "E-mail de recuperação enviado. Verifique sua caixa de entrada.");
+  } else {
+    showMsg(msg, "error", res.erro);
+  }
+}
+
+// ── VOLTAR PARA LOGIN ────────────────────────────────────────────────
+function voltarParaLogin() {
+  document.getElementById("tela-verificacao").style.display = "none";
+  document.getElementById("form-login").style.display = "";
+}
+
+// ── ENTER NOS INPUTS ─────────────────────────────────────────────────
+document.addEventListener("keydown", e => {
+  if (e.key !== "Enter") return;
+  const loginVisivel = document.getElementById("form-login").style.display !== "none";
+  const cadVisivel   = document.getElementById("form-cadastro").style.display !== "none";
+  if (loginVisivel) doLogin();
+  else if (cadVisivel) doCadastro();
+});
+
+// ── HELPERS ───────────────────────────────────────────────────────────
+function showMsg(el, type, text) {
+  el.className = "msg " + type + " show";
+  el.textContent = text;
+}
+function clearMsg(el) {
+  el.className = "msg";
+  el.textContent = "";
+}
+</script>
+</body>
+</html>

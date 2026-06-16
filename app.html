@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#6B3520" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <title>Meu Caixa Digital</title>
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" href="/icons/icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      font-family: 'DM Sans', sans-serif;
+      background: #6B3520;
+      overflow: hidden;
+    }
+
+    /* ── Splash screen ─────────────────────────────────────────── */
+    #mc-splash {
+      position: fixed;
+      inset: 0;
+      background: var(--primary, #6B3520);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      z-index: 99999;
+      transition: opacity .4s ease, visibility .4s ease;
+    }
+    #mc-splash.oculto {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    #mc-splash-logo {
+      width: 72px;
+      height: 72px;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.30);
+    }
+    #mc-splash-titulo {
+      font-family: 'DM Serif Display', serif;
+      font-size: 28px;
+      color: #fff;
+      letter-spacing: .3px;
+    }
+    #mc-splash-empresa {
+      font-size: 14px;
+      color: rgba(255,255,255,.70);
+      font-weight: 500;
+    }
+    #mc-splash-loader {
+      width: 40px;
+      height: 4px;
+      background: rgba(255,255,255,.25);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+    #mc-splash-loader::after {
+      content: "";
+      display: block;
+      width: 40%;
+      height: 100%;
+      background: rgba(255,255,255,.75);
+      border-radius: 2px;
+      animation: mcSplashSlide 1.2s infinite ease-in-out;
+    }
+    @keyframes mcSplashSlide {
+      0%   { transform: translateX(-100%); }
+      100% { transform: translateX(350%); }
+    }
+
+    /* ── Shell (oculto durante o splash) ───────────────────────── */
+    #shell {
+      height: 100vh;
+      height: 100dvh;
+      opacity: 0;
+      transition: opacity .35s ease;
+      background: #f8f5f2;
+    }
+    #shell.visivel {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Splash screen ─────────────────────────────────────────── -->
+  <div id="mc-splash">
+    <img id="mc-splash-logo" src="icons/icon-192.png"
+         alt="MeuCaixa" onerror="this.style.display='none'" />
+    <span id="mc-splash-titulo">MeuCaixa</span>
+    <span id="mc-splash-empresa">Carregando...</span>
+    <div id="mc-splash-loader"></div>
+  </div>
+
+  <!-- ── Shell principal (template injetado aqui) ──────────────── -->
+  <div id="shell"></div>
+
+  <!-- ── Script principal (ES Module) ─────────────────────────── -->
+  <script type="module">
+    // ── Imports ────────────────────────────────────────────────────
+    import { onAuthChange, calcularAcesso, logout, getSessao }
+      from "./auth.js";
+    import { aplicarTemaGlobal }
+      from "./theme.js";
+    import { limparNotificacoesExpiradas, notificar }
+      from "./notificacoes.js";
+    import { verificarModoLeitura }
+      from "./planGuard.js";
+    import { iniciarRouter, navigate }
+      from "./router.js";
+    import { registrarErro }
+      from "./utils.js";
+
+    // Importações Firebase (necessárias para onSnapshot de comunicados)
+    import { db }
+      from "./firebase-config.js";
+    import { doc, getDoc, onSnapshot }
+      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    // ── PASSO 1: Splash com nomeEmpresa do cache ──────────────────
+    const cacheLocal = (() => {
+      try { return JSON.parse(localStorage.getItem("mc_sessao")); } catch { return null; }
+    })();
+
+    const elEmpresaSplash = document.getElementById("mc-splash-empresa");
+    if (cacheLocal?.nomeEmpresa) {
+      elEmpresaSplash.textContent = cacheLocal.nomeEmpresa;
+    }
+    // EC-01: sem nomeEmpresa no cache → fallback genérico, sem quebrar
+
+    // ── PASSO 2: onAuthChange — verificar sessão ──────────────────
+    onAuthChange(async (sessao) => {
+      if (!sessao) {
+        // Não autenticado → redirecionar para login
+        window.location.replace("login.html");
+        return;
+      }
+
+      // EC-05: superAdmin → redirecionar para painel FSG
+      if (sessao.superAdmin) {
+        window.location.replace("admin-fsg.html");
+        return;
+      }
+
+      // Expor sessão globalmente para outros módulos
+      window._sessao     = sessao;
+      window._empresaId  = sessao.empresaId;
+
+      try {
+        await _inicializarApp(sessao);
+      } catch (e) {
+        registrarErro("app", e?.message || String(e), "app.html");
+        // Mesmo com erro, tenta revelar o app
+        _revelarApp();
+      }
+    });
+
+    // ── SEQUÊNCIA COMPLETA DE CARREGAMENTO ────────────────────────
+    async function _inicializarApp(sessao) {
+
+      // PASSO 3: detectar layout (auto/forçado)
+      // EC-06: < 768 → mobile, >= 768 → desktop
+      const layoutForcado = sessao.layoutForcado || "auto";
+      if (layoutForcado === "mobile") {
+        window._layoutMobile = true;
+      } else if (layoutForcado === "desktop") {
+        window._layoutMobile = false;
+      } else {
+        // Auto: baseado na largura atual
+        window._layoutMobile = window.innerWidth < 768;
+      }
+
+      // Reavaliar layout no resize (auto apenas)
+      if (layoutForcado === "auto") {
+        window.addEventListener("resize", () => {
+          window._layoutMobile = window.innerWidth < 768;
+        });
+      }
+
+      // PASSO 4: carregar e injetar template correto
+      const templateArq = window._layoutMobile ? "mobile" : "desktop";
+      try {
+        const html = await fetch(`/templates/${templateArq}.html`).then(r => r.text());
+        document.getElementById("shell").innerHTML = html;
+      } catch (e) {
+        registrarErro("template", e?.message, "app.html");
+        // Fallback: shell mínimo para não bloquear o app
+        document.getElementById("shell").innerHTML =
+          `<div id="conteudo-principal" style="padding:24px"></div>`;
+      }
+
+      // PASSO 5: aplicar tema global (Padrão no :root)
+      aplicarTemaGlobal();
+
+      // PASSO 6: limpar notificações expiradas
+      limparNotificacoesExpiradas();
+
+      // PASSO 7: verificar sistema/config (manutenção)
+      await _verificarManutencao(sessao);
+
+      // PASSO 8: calcularAcesso → banners e modoLeitura
+      _configurarBanners(sessao);
+      verificarModoLeitura();
+
+      // PASSO 9: gerar navegação via router
+      iniciarRouter(sessao);
+
+      // Configurar badge de conexão em tempo real (FR-011, SC-006)
+      _configurarBadgeConexao();
+
+      // PASSO 10: verificar abertura automática de caixa
+      _verificarAberturaAutomaticaCaixa(sessao);
+
+      // PASSO 11: onSnapshot em sistema/comunicados/{empresaId}
+      _escutarComunicados(sessao);
+
+      // PASSO 12: ocultar splash → revelar app
+      _revelarApp();
+
+      // PASSO 13: navegar para rota inicial
+      const hashRota = window.location.hash.replace("#", "");
+      const rotaInicial = hashRota || "dashboard";
+      await navigate(rotaInicial);
+
+      // PASSO 14: inicializar syncManager (import lazy)
+      try {
+        const { syncManager } = await import("./syncManager.js");
+        await syncManager.inicializar(sessao.empresaId, sessao.perfil, sessao.plano);
+        window._syncManager = syncManager;
+      } catch (e) {
+        registrarErro("sync", e?.message || String(e), "app.html");
+      }
+    }
+
+    // ── PASSO 7: Verificar manutenção ─────────────────────────────
+    async function _verificarManutencao(sessao) {
+      try {
+        const configRef  = doc(db, "sistema", "config");
+        const configSnap = await getDoc(configRef);
+        if (!configSnap.exists()) return;
+
+        const config = configSnap.data();
+        if (config.manutencaoAtiva) {
+          // EC-04: manutenção tem prioridade máxima
+          const elTexto = document.getElementById("banner-manutencao-texto");
+          if (elTexto && config.textoManutencao) {
+            elTexto.textContent = config.textoManutencao;
+          }
+          _mostrarBanner("banner-manutencao");
+
+          // modoLeitura global ativado pelo admin FSG
+          if (config.modoLeituraGlobal) {
+            // Trata como somente_leitura independente do acesso individual
+            window._modoLeituraGlobal = true;
+          }
+        }
+      } catch {
+        // EC-07: falha silenciosa (pode ser offline)
+      }
+    }
+
+    // ── PASSO 8: Configurar banners condicionais ──────────────────
+    function _configurarBanners(sessao) {
+      const acesso         = sessao.acesso;
+      const status         = sessao.status;
+      const assinaturaAtiva = sessao.assinaturaAtiva;
+      const diasTrial      = sessao.diasTrialRestantes || 0;
+
+      // Banner offline (atualiza via eventos de rede — ver _configurarBadgeConexao)
+      if (!navigator.onLine) _mostrarBanner("banner-offline");
+
+      // Banner trial ativo
+      if (!assinaturaAtiva && acesso === "ativo" && status !== "suspenso") {
+        const elTrial = document.getElementById("banner-trial-texto");
+        if (elTrial) {
+          elTrial.textContent = diasTrial === 1
+            ? "Período de teste: 1 dia restante."
+            : `Período de teste: ${diasTrial} dias restantes.`;
+        }
+        _mostrarBanner("banner-trial");
+      }
+
+      // Banner trial expirado
+      if (acesso === "somente_leitura" && !assinaturaAtiva && status !== "suspenso" && status !== "cancelado") {
+        _ocultarBanner("banner-trial");
+        _mostrarBanner("banner-expirado");
+      }
+
+      // Banner suspenso
+      if (status === "suspenso") {
+        _ocultarBanner("banner-trial");
+        _mostrarBanner("banner-suspenso");
+      }
+
+      // Banner cancelado (reutiliza expirado com texto ajustado)
+      if (status === "cancelado") {
+        _ocultarBanner("banner-trial");
+        const el = document.getElementById("banner-expirado");
+        const elSpan = el?.querySelector("span:nth-child(2)");
+        if (elSpan) elSpan.textContent = "Assinatura cancelada. Seus dados estão preservados.";
+        _mostrarBanner("banner-expirado");
+      }
+    }
+
+    // ── PASSO 10: Abertura automática de caixa ────────────────────
+    function _verificarAberturaAutomaticaCaixa(sessao) {
+      try {
+        const kitRaw = localStorage.getItem("mc_kit_offline");
+        if (!kitRaw) return;
+        const kit = JSON.parse(kitRaw);
+        const cfg = kit?.configuracaoCaixa;
+        if (!cfg?.autoAbrir || !cfg?.horaAbertura) return;
+
+        const agora    = new Date();
+        const [hh, mm] = cfg.horaAbertura.split(":").map(Number);
+        const alvo     = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate(), hh, mm, 0);
+        const diasSemana = cfg.diasSemana || [0,1,2,3,4,5,6];
+        const diaAtual   = agora.getDay();
+
+        if (!diasSemana.includes(diaAtual)) return;
+
+        const diff = alvo.getTime() - agora.getTime();
+
+        if (diff > 0 && diff <= 3600000) {
+          // Abre em até 1h → agenda setTimeout
+          setTimeout(async () => {
+            try {
+              const { renderizar } = await import("./modulos/caixa.js");
+              // Dispara evento de abertura automática
+              document.dispatchEvent(new CustomEvent("mc:abrirCaixaAutomatico", {
+                detail: { hora: cfg.horaAbertura }
+              }));
+            } catch { /* módulo ainda não implementado */ }
+          }, diff);
+        } else if (diff <= 0 && diff >= -60000) {
+          // Tolerância ±60s: abrir agora
+          document.dispatchEvent(new CustomEvent("mc:abrirCaixaAutomatico", {
+            detail: { hora: cfg.horaAbertura }
+          }));
+        }
+      } catch {
+        // Silencioso — não bloquear carregamento
+      }
+    }
+
+    // ── PASSO 11: onSnapshot de comunicados ──────────────────────
+    function _escutarComunicados(sessao) {
+      if (!sessao?.empresaId) return;
+      try {
+        const refComunicado = doc(db, "sistema", "comunicados", sessao.empresaId);
+        onSnapshot(refComunicado, (snap) => {
+          if (!snap.exists()) return;
+          const dados = snap.data();
+          if (!dados?.mensagem) return;
+          // Notificar via evento para o dashboard exibir em destaque
+          document.dispatchEvent(new CustomEvent("mc:comunicadoFSG", {
+            detail: dados
+          }));
+        });
+      } catch {
+        // EC-07: falha silenciosa offline
+      }
+    }
+
+    // ── PASSO 12: Revelar app (ocultar splash) ────────────────────
+    function _revelarApp() {
+      const splash = document.getElementById("mc-splash");
+      const shell  = document.getElementById("shell");
+      if (splash) splash.classList.add("oculto");
+      if (shell)  shell.classList.add("visivel");
+    }
+
+    // ── Badge de conexão em tempo real ───────────────────────────
+    function _configurarBadgeConexao() {
+      const atualizar = () => {
+        const online = navigator.onLine;
+
+        // Header badges
+        document.querySelectorAll("#mc-badge-conexao").forEach(el => {
+          el.textContent = online ? "Online" : "Offline";
+          el.className   = online ? "online" : "offline";
+        });
+
+        // Footer status
+        document.querySelectorAll("#mc-footer-status").forEach(el => {
+          el.textContent = online ? "● Online" : "● Offline";
+          el.className   = online ? "online" : "offline";
+        });
+
+        // Banners offline
+        if (online) {
+          _ocultarBanner("banner-offline");
+        } else {
+          // Tenta obter horário de fechamento do caixa do kit offline
+          try {
+            const kit = JSON.parse(localStorage.getItem("mc_kit_offline") || "{}");
+            const hora = kit?.configuracaoCaixa?.horaFechamento || "";
+            const elTexto = document.getElementById("banner-offline-texto");
+            if (elTexto) {
+              elTexto.textContent = hora
+                ? `Você está offline. Caixa fecha às ${hora}.`
+                : "Você está offline. Algumas funções podem estar indisponíveis.";
+            }
+          } catch { /* silencioso */ }
+          _mostrarBanner("banner-offline");
+        }
+      };
+
+      window.addEventListener("online",  atualizar);
+      window.addEventListener("offline", atualizar);
+      atualizar(); // estado inicial
+    }
+
+    // ── Helpers de banner ────────────────────────────────────────
+    function _mostrarBanner(id) {
+      document.getElementById(id)?.classList.add("visivel");
+    }
+    function _ocultarBanner(id) {
+      document.getElementById(id)?.classList.remove("visivel");
+    }
+  </script>
+
+</body>
+</html>

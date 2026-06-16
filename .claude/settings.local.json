@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\maiar\\\\OneDrive\\\\Área de Trabalho\\\\meucaixa\" -File | Where-Object { $_.Extension -in \".json\",\".rc\" -or $_.Name -in \"firebase.json\",\".firebaserc\" } | Select-Object Name)",
+      "mcp__Claude_Preview__preview_start"
+    ]
+  }
+}

@@ -1,0 +1,39 @@
+// ╔══════════════════════════════════════════════════════════════════╗
+// ║  MeuCaixa · storage.rules · v4.2                                ║
+// ╚══════════════════════════════════════════════════════════════════╝
+
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Logo da empresa
+    match /empresas/{empresaId}/logo/{arquivo} {
+      allow read:  if request.auth != null;
+      allow write: if request.auth != null
+                   && request.resource.size < 2 * 1024 * 1024
+                   && request.resource.contentType.matches('image/(jpeg|png)');
+    }
+
+    // Recibos PDF
+    match /empresas/{empresaId}/recibos/{arquivo} {
+      allow read:  if request.auth != null;
+      allow write: if request.auth != null
+                   && request.resource.size < 5 * 1024 * 1024;
+    }
+
+    // Folha de pagamento PDF
+    match /empresas/{empresaId}/folha/{arquivo} {
+      allow read:  if request.auth != null;
+      allow write: if request.auth != null
+                   && request.resource.size < 5 * 1024 * 1024;
+    }
+
+    // Fotos de produtos
+    match /empresas/{empresaId}/produtos/{arquivo} {
+      allow read:  if request.auth != null;
+      allow write: if request.auth != null
+                   && request.resource.size < 2 * 1024 * 1024
+                   && request.resource.contentType.matches('image/(jpeg|png)');
+    }
+  }
+}

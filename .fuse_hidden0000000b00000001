@@ -1,0 +1,49 @@
+[debug] [2026-06-14T01:01:55.483Z] ----------------------------------------------------------------------
+[debug] [2026-06-14T01:01:55.491Z] Command:       /usr/bin/node /sessions/optimistic-upbeat-mendel/fbcli/node_modules/.bin/firebase deploy --only firestore:rules --token 1//0hW3aaPE-agfICgYIARAAGBESNgF-L9Ir6p-fSbfltWhejGAXWWok6cTJsyCDMe6bW9BvWYxN6S15a6JlxXuqsWjXr1013Snxpw --project meucaixa-prod
+[debug] [2026-06-14T01:01:55.492Z] CLI Version:   15.20.0
+[debug] [2026-06-14T01:01:55.493Z] Platform:      linux
+[debug] [2026-06-14T01:01:55.494Z] Node Version:  v22.22.3
+[debug] [2026-06-14T01:01:55.494Z] Time:          Sun Jun 14 2026 01:01:55 GMT+0000 (Coordinated Universal Time)
+[debug] [2026-06-14T01:01:55.495Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-06-14T01:01:55.498Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
+[debug] [2026-06-14T01:01:58.224Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-06-14T01:01:58.225Z] > authorizing via --token option
+[warn] ⚠  Authenticating with `--token` is deprecated and will be removed in a future major version of `firebase-tools`. Instead, use a service account key with `GOOGLE_APPLICATION_CREDENTIALS`: https://cloud.google.com/docs/authentication/getting-started 
+[debug] [2026-06-14T01:01:58.227Z] [iam] checking project meucaixa-prod for permissions ["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]
+[debug] [2026-06-14T01:01:58.228Z] No OAuth tokens found
+[debug] [2026-06-14T01:01:58.228Z] No OAuth tokens found
+[debug] [2026-06-14T01:01:58.229Z] > refreshing access token with scopes: []
+[debug] [2026-06-14T01:01:58.230Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-06-14T01:01:58.231Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-06-14T01:01:58.275Z] <<< [apiv2][status] GET https://firebase-public.firebaseio.com/cli.json 403
+[debug] [2026-06-14T01:01:58.275Z] <<< [apiv2][body] GET https://firebase-public.firebaseio.com/cli.json "Connection blocked by network allowlist"
+[warn] ⚠  Unable to fetch the CLI MOTD and remote config. This is not a fatal error, but may indicate an issue with your network connection. 
+[debug] [2026-06-14T01:01:58.276Z] Failed to fetch MOTD FirebaseError: Unable to parse JSON: SyntaxError: Unexpected token 'C', "Connection"... is not valid JSON
+[debug] [2026-06-14T01:01:58.279Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 403
+[debug] [2026-06-14T01:01:58.280Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[error] Authentication Error: Your credentials are no longer valid. Please run firebase login --reauth
+
+For CI servers and headless environments, generate a new token with firebase login:ci
+[debug] [2026-06-14T01:01:58.281Z] [iam] error while checking permissions, command may fail: Authentication Error: Your credentials are no longer valid. Please run firebase login --reauth
+
+For CI servers and headless environments, generate a new token with firebase login:ci
+[info] 
+[info] === Deploying to 'meucaixa-prod'...
+[info] 
+[info] i  deploying firestore 
+[info] i  firestore: ensuring required API firestore.googleapis.com is enabled... 
+[debug] [2026-06-14T01:01:58.286Z] No OAuth tokens found
+[debug] [2026-06-14T01:01:58.286Z] No OAuth tokens found
+[debug] [2026-06-14T01:01:58.286Z] > refreshing access token with scopes: []
+[debug] [2026-06-14T01:01:58.287Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-06-14T01:01:58.287Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-06-14T01:01:58.299Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 403
+[debug] [2026-06-14T01:01:58.299Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[error] Authentication Error: Your credentials are no longer valid. Please run firebase login --reauth
+
+For CI servers and headless environments, generate a new token with firebase login:ci
+[error] 
+[error] Error: Authentication Error: Your credentials are no longer valid. Please run firebase login --reauth
+
+For CI servers and headless environments, generate a new token with firebase login:ci

@@ -1,0 +1,221 @@
+// ╔══════════════════════════════════════════════════════════════════╗
+// ║  MeuCaixa · firestore.rules · v4.2                              ║
+// ║  Segurança multi-tenant — isolamento por empresaId              ║
+// ║  Sem custom claims — perfil lido do documento usuarios/{uid}    ║
+// ╚══════════════════════════════════════════════════════════════════╝
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── FUNÇÕES AUXILIARES ─────────────────────────────────────────
+
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function uid() {
+      return request.auth.uid;
+    }
+
+    // Lê o documento do usuário autenticado
+    function getUsuario() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data;
+    }
+
+    // Verifica se o usuário pertence à empresa
+    function pertenceEmpresa(empresaId) {
+      return isAuth() && getUsuario().empresaId == empresaId;
+    }
+
+    // Verifica se é admin da empresa
+    function isAdmin() {
+      return isAuth() && getUsuario().perfil == "admin";
+    }
+
+    // Verifica se é superAdmin FSG
+    function isSuperAdmin() {
+      return isAuth() && getUsuario().superAdmin == true;
+    }
+
+    // Verifica se pertence à empresa (admin ou operador)
+    function isAdminOuOperador(empresaId) {
+      return pertenceEmpresa(empresaId);
+    }
+
+    // ── SISTEMA (manutenção, comunicados, config) ──────────────────
+    // Leitura pública — sistema/config é lido antes do login
+    // Escrita somente superAdmin
+    match /sistema/{docId} {
+      allow read:  if true;
+      allow write: if isSuperAdmin();
+    }
+
+    // Subcoleção de comunicados por empresa
+    match /sistema/comunicados/{empresaId} {
+      allow read:  if isAuth() && pertenceEmpresa(empresaId);
+      allow write: if isSuperAdmin();
+    }
+
+    // ── ERROS DO SISTEMA ───────────────────────────────────────────
+    match /erros_sistema/{erroId} {
+      allow read:   if isSuperAdmin();
+      allow create: if isAuth();
+      allow update: if false;
+      allow delete: if isSuperAdmin();
+    }
+
+    // ── FEEDBACK DOS LOJISTAS ──────────────────────────────────────
+    match /feedback/{feedbackId} {
+      allow read:   if isSuperAdmin();
+      allow create: if isAuth();
+      allow update: if isSuperAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    // ── USUÁRIOS (coleção raiz) ────────────────────────────────────
+    // create: permitido quando uid == usuarioId (cadastro inicial)
+    // Regra anterior tinha create: false — bloqueava o cadastro
+    match /usuarios/{usuarioId} {
+      allow read:   if isAuth() && uid() == usuarioId;
+      allow create: if isAuth() && uid() == usuarioId;
+      // Escalada de privilégios bloqueada: usuário só pode alterar campos de preferência.
+      // Campos sensíveis (perfil, superAdmin, empresaId) só modificáveis por isSuperAdmin().
+      allow update: if (isAuth() && uid() == usuarioId &&
+                        !request.resource.data.diff(resource.data).affectedKeys()
+                          .hasAny(["perfil", "superAdmin", "empresaId"]))
+                     || isSuperAdmin();
+      allow delete: if false;
+    }
+
+    // ── EMPRESA ────────────────────────────────────────────────────
+    match /empresas/{empresaId} {
+      // Leitura: qualquer usuário autenticado OU membro da empresa
+      // isAuth() é avaliado PRIMEIRO (short-circuit) para evitar que getUsuario()
+      // falhe em cadastros onde usuarios/{uid} ainda não existe.
+      // TODO: a query de CPF/CNPJ durante cadastro precisará ser migrada para
+      //       Cloud Function com transação atômica — ver CLAUDE.md (M22)
+      allow read:   if isAuth() || isAdminOuOperador(empresaId);
+
+      // create: permitido quando o uid do usuário criando == empresaId (cadastro inicial)
+      allow create: if isAuth() && uid() == empresaId;
+
+      // update: somente admin da empresa ou superAdmin (ex: suspensão via painel FSG)
+      allow update: if (pertenceEmpresa(empresaId) && isAdmin()) || isSuperAdmin();
+
+      // delete: somente Cloud Functions (via Admin SDK — ignora as regras)
+      allow delete: if false;
+
+      // Usuários da empresa (subcoleção)
+      match /usuarios/{usuarioId} {
+        allow read:   if pertenceEmpresa(empresaId);
+        allow create: if false;
+        allow update: if pertenceEmpresa(empresaId) && isAdmin();
+        allow delete: if false;
+      }
+
+      // Clientes
+      match /clientes/{clienteId} {
+        allow read:  if isAdminOuOperador(empresaId);
+        allow write: if pertenceEmpresa(empresaId) && isAdmin();
+      }
+
+      // Fornecedores
+      match /fornecedores/{fornecedorId} {
+        allow read:  if isAdminOuOperador(empresaId);
+        allow write: if pertenceEmpresa(empresaId) && isAdmin();
+      }
+
+      // Colaboradores
+      match /colaboradores/{colaboradorId} {
+        allow read:  if isAdminOuOperador(empresaId);
+        allow write: if pertenceEmpresa(empresaId) && isAdmin();
+      }
+
+      // Produtos
+      match /produtos/{produtoId} {
+        allow read:  if isAdminOuOperador(empresaId);
+        allow write: if isAdminOuOperador(empresaId);
+      }
+
+      // Estoque
+      match /estoque/{movId} {
+        allow read:  if isAdminOuOperador(empresaId);
+        allow write: if isAdminOuOperador(empresaId);
+      }
+
+      // Vendas
+      match /vendas/{vendaId} {
+        allow read:   if isAdminOuOperador(empresaId);
+        allow create: if isAdminOuOperador(empresaId);
+        allow update: if isAdminOuOperador(empresaId);
+        allow delete: if false;
+      }
+
+      // Caixa
+      match /caixa/{caixaId} {
+        allow read:  if isAdminOuOperador(empresaId);
+        allow write: if isAdminOuOperador(empresaId);
+
+        match /movimentacoes/{movId} {
+          allow read:  if isAdminOuOperador(empresaId);
+          allow write: if isAdminOuOperador(empresaId);
+        }
+      }
+
+      // Crediário
+      match /crediario/{crediarioId} {
+        allow read:  if isAdminOuOperador(empresaId);
+        allow write: if isAdminOuOperador(empresaId);
+
+        match /parcelas/{parcelaId} {
+          allow read:  if isAdminOuOperador(empresaId);
+          allow write: if isAdminOuOperador(empresaId);
+        }
+
+        match /pagamentos/{pagamentoId} {
+          allow read:  if isAdminOuOperador(empresaId);
+          allow write: if isAdminOuOperador(empresaId);
+        }
+      }
+
+      // Despesas
+      match /despesas/{despesaId} {
+        allow read:  if isAdminOuOperador(empresaId);
+        allow write: if pertenceEmpresa(empresaId) && isAdmin();
+      }
+
+      // Folha de pagamento
+      match /folha/{folhaId} {
+        allow read:  if pertenceEmpresa(empresaId) && isAdmin();
+        allow write: if pertenceEmpresa(empresaId) && isAdmin();
+      }
+
+      // Recibos
+      match /recibos/{reciboId} {
+        allow read:  if pertenceEmpresa(empresaId) && isAdmin();
+        allow write: if pertenceEmpresa(empresaId) && isAdmin();
+      }
+
+      // Comandos Admin → Operador
+      match /comandos/{operadorId} {
+        allow read:  if pertenceEmpresa(empresaId) &&
+                        (isAdmin() || uid() == operadorId);
+        allow write: if pertenceEmpresa(empresaId) && isAdmin();
+      }
+
+      // Status dos operadores
+      match /status/{operadorId} {
+        allow read:  if pertenceEmpresa(empresaId) && isAdmin();
+        allow write: if pertenceEmpresa(empresaId) && uid() == operadorId;
+      }
+
+      // Controle de sync manual
+      match /sync_control/{adminId} {
+        allow read:  if pertenceEmpresa(empresaId) && isAdmin();
+        allow write: if pertenceEmpresa(empresaId) && isAdmin() &&
+                        uid() == adminId;
+      }
+    }
+  }
+}
