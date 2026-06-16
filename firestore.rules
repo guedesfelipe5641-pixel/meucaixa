@@ -51,8 +51,8 @@ service cloud.firestore {
       allow write: if isSuperAdmin();
     }
 
-    // Subcoleção de comunicados por empresa
-    match /sistema/comunicados/{empresaId} {
+    // Comunicados por empresa (coleção raiz)
+    match /comunicados/{empresaId} {
       allow read:  if isAuth() && pertenceEmpresa(empresaId);
       allow write: if isSuperAdmin();
     }
@@ -219,3 +219,4 @@ service cloud.firestore {
     }
   }
 }
+       

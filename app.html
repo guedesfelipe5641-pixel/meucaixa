@@ -142,7 +142,10 @@
     // ── PASSO 2: onAuthChange — verificar sessão ──────────────────
     onAuthChange(async (sessao) => {
       if (!sessao) {
-        // Não autenticado → redirecionar para login
+        // Não autenticado → limpar cache local e redirecionar para login
+        // Sem limpar mc_sessao, login.html auto-redireciona para cá e cria loop infinito
+        localStorage.removeItem("mc_sessao");
+        localStorage.removeItem("mc_kit_offline");
         window.location.replace("login.html");
         return;
       }
