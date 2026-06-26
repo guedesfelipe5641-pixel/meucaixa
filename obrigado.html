@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MeuCaixa · Conta criada com sucesso!</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="/icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #6B3520;
+      --primary-dark: #4A2218;
+      --accent: #F0A335;
+      --text: #1A1A1A;
+      --text-light: #555;
+      --border: #E8E0D8;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 20px;
+      color: #fff;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 48px 40px;
+      max-width: 500px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,.2);
+    }
+
+    .icon-wrap {
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+      margin: 0 auto 24px;
+    }
+
+    h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 28px;
+      color: var(--primary);
+      margin-bottom: 12px;
+      line-height: 1.2;
+    }
+
+    .subtitle {
+      font-size: 16px;
+      color: var(--text-light);
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
+
+    .passos {
+      text-align: left;
+      background: #FAFAF8;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 32px;
+    }
+
+    .passos-titulo {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--primary);
+      margin-bottom: 14px;
+    }
+
+    .passo-item {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .passo-item:last-child { border-bottom: none; }
+
+    .passo-num {
+      width: 24px;
+      height: 24px;
+      background: var(--primary);
+      color: #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .passo-text strong {
+      display: block;
+      font-size: 14px;
+      color: var(--text);
+      margin-bottom: 2px;
+    }
+    .passo-text span {
+      font-size: 13px;
+      color: var(--text-light);
+    }
+
+    .btn-acessar {
+      display: block;
+      background: var(--primary);
+      color: #fff;
+      padding: 15px;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: background .2s, transform .15s;
+      margin-bottom: 14px;
+    }
+    .btn-acessar:hover {
+      background: var(--primary-dark);
+      transform: translateY(-2px);
+    }
+
+    .btn-voltar {
+      display: block;
+      font-size: 14px;
+      color: var(--text-light);
+      text-decoration: none;
+      padding: 8px;
+    }
+    .btn-voltar:hover { color: var(--primary); }
+
+    .logo {
+      font-family: 'DM Serif Display', serif;
+      font-size: 20px;
+      color: rgba(255,255,255,.85);
+      text-decoration: none;
+      margin-top: 28px;
+    }
+    .logo span { color: var(--accent); }
+
+    @media (max-width: 480px) {
+      .card { padding: 36px 24px; }
+      h1 { font-size: 24px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <div class="icon-wrap">🎉</div>
+
+    <h1>Conta criada com sucesso!</h1>
+    <p class="subtitle">
+      Bem-vindo ao MeuCaixa! Falta só um passo para começar seus
+      <strong>30 dias grátis</strong>.
+    </p>
+
+    <div class="passos">
+      <div class="passos-titulo">O que fazer agora</div>
+
+      <div class="passo-item">
+        <div class="passo-num">1</div>
+        <div class="passo-text">
+          <strong>Confirme seu e-mail</strong>
+          <span>Enviamos um link de verificação. Clique nele para ativar sua conta.</span>
+        </div>
+      </div>
+
+      <div class="passo-item">
+        <div class="passo-num">2</div>
+        <div class="passo-text">
+          <strong>Trial começa automaticamente</strong>
+          <span>Após confirmar o e-mail, seus 30 dias gratuitos são liberados na hora.</span>
+        </div>
+      </div>
+
+      <div class="passo-item">
+        <div class="passo-num">3</div>
+        <div class="passo-text">
+          <strong>Configure sua loja</strong>
+          <span>Cadastre produtos, clientes e comece a vender — online ou offline.</span>
+        </div>
+      </div>
+    </div>
+
+    <a href="login.html" class="btn-acessar">Ir para o app →</a>
+    <a href="landing.html" class="btn-voltar">← Voltar para a página inicial</a>
+  </div>
+
+  <a href="landing.html" class="logo">Meu<span>Caixa</span></a>
+
+</body>
+</html>

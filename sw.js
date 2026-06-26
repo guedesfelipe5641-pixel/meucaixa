@@ -5,7 +5,7 @@
 // ║  ⚠️  Atualizar CACHE_NAME a cada deploy importante              ║
 // ╚══════════════════════════════════════════════════════════════════╝
 
-const CACHE_NAME = "meucaixa-v3.1";
+const CACHE_NAME = "meucaixa-1782502269870";
 
 // Assets que serão cacheados no install.
 // Inclui todas as páginas HTML, scripts JS, manifest e ícones.
@@ -24,6 +24,27 @@ const STATIC_ASSETS = [
   "/syncManager.js",
   "/notificacoes.js",
   "/vendas.js",
+  "/components.css",
+  "/csvExport.js",
+  "/templates/desktop.html",
+  "/templates/mobile.html",
+  "/templates/recibo_eletronicos.js",
+  "/templates/orcamento_conserto.js",
+  "/templates/orcamento_encomenda.js",
+  "/modulos/dashboard_admin.js",
+  "/modulos/dashboard_operador.js",
+  "/modulos/caixa.js",
+  "/modulos/estoque.js",
+  "/modulos/produtos.js",
+  "/modulos/clientes.js",
+  "/modulos/fornecedores.js",
+  "/modulos/colaboradores.js",
+  "/modulos/crediario.js",
+  "/modulos/despesas.js",
+  "/modulos/fluxo.js",
+  "/modulos/folhaPagamento.js",
+  "/modulos/recibos.js",
+  "/modulos/configuracoes.js",
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
@@ -60,21 +81,29 @@ self.addEventListener("install", event => {
 });
 
 // ─── ACTIVATE ──────────────────────────────────────────────────────
-// Remove caches antigos (versões anteriores do app).
+// Remove caches antigos e notifica clientes abertos sobre a nova versão.
 self.addEventListener("activate", event => {
   event.waitUntil(
     caches.keys().then(cacheNames => {
+      const antigos = cacheNames.filter(name => name !== CACHE_NAME);
+      // houveAtualizacao = true quando existiam caches de versões anteriores
+      // (distingue atualização de primeira instalação — evita banner desnecessário)
+      const houveAtualizacao = antigos.length > 0;
+
       return Promise.all(
-        cacheNames
-          .filter(name => name !== CACHE_NAME)
-          .map(name => {
-            console.log("[SW] Removendo cache antigo:", name);
-            return caches.delete(name);
-          })
-      );
-    }).then(() => {
-      // Assume controle de todas as abas abertas imediatamente.
-      return self.clients.claim();
+        antigos.map(name => {
+          console.log("[SW] Removendo cache antigo:", name);
+          return caches.delete(name);
+        })
+      )
+      .then(() => self.clients.claim())
+      .then(() => {
+        if (!houveAtualizacao) return;
+        // Notificar todas as abas abertas: nova versão pronta para uso
+        return self.clients.matchAll({ type: "window" }).then(clients => {
+          clients.forEach(c => c.postMessage({ type: "SW_UPDATED" }));
+        });
+      });
     })
   );
 });

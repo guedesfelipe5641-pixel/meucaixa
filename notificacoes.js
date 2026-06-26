@@ -292,7 +292,7 @@ function _fecharOverlay() {
  * @param {string} titulo    - Título da notificação
  * @param {string} mensagem  - Corpo da mensagem
  */
-export function notificar(tipo, titulo, mensagem) {
+export function notificar(tipo, titulo, mensagem, opcoes = {}) {
   // Tipo inválido → fallback para informacao
   const cfg = TIPOS[tipo] || TIPOS.informacao;
 
@@ -325,18 +325,31 @@ export function notificar(tipo, titulo, mensagem) {
   document.body.appendChild(overlay);
   _overlayAtivo = overlay;
 
-  // ── Barra de progresso (7 segundos) ──────────────────
-  const barra = overlay.querySelector("#_mc_prog");
-  // Força reflow antes de aplicar transition para animação funcionar
-  barra.getBoundingClientRect();
-  barra.style.transition = `transform ${DURACAO_MS}ms linear`;
-  barra.style.transform  = "scaleX(0)";
+  const autoClose  = opcoes.autoClose !== false;
+  const labelBotao = opcoes.labelBotao || "OK";
+  const onConfirm  = typeof opcoes.onConfirm === "function" ? opcoes.onConfirm : _fecharOverlay;
 
-  // ── Fechar automaticamente após 7s ───────────────────
-  _timerAtivo = setTimeout(_fecharOverlay, DURACAO_MS);
+  // Atualizar label do botão
+  overlay.querySelector(".mc-notif-btn").textContent = labelBotao;
 
-  // ── Botão OK fecha imediatamente ─────────────────────
-  overlay.querySelector(".mc-notif-btn").addEventListener("click", _fecharOverlay);
+  // ── Barra de progresso e auto-close ──────────────────
+  if (autoClose) {
+    const barra = overlay.querySelector("#_mc_prog");
+    // Força reflow antes de aplicar transition para animação funcionar
+    barra.getBoundingClientRect();
+    barra.style.transition = `transform ${DURACAO_MS}ms linear`;
+    barra.style.transform  = "scaleX(0)";
+    _timerAtivo = setTimeout(_fecharOverlay, DURACAO_MS);
+  } else {
+    const barra = overlay.querySelector("#_mc_prog");
+    if (barra) barra.style.display = "none";
+  }
+
+  // ── Botão: fecha overlay e executa callback ───────────
+  overlay.querySelector(".mc-notif-btn").addEventListener("click", () => {
+    if (onConfirm !== _fecharOverlay) _fecharOverlay();
+    onConfirm();
+  });
 
   // ── Persistir no localStorage ────────────────────────
   const entrada = {

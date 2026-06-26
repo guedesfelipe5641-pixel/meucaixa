@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin FSG · Meu Caixa Digital</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --primary:#6B3520; --accent:#F0A335; }
+    *    { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'DM Sans',sans-serif; background:#f5f5f5; min-height:100vh; }
+
+    /* ── Login ─────────────────────────────────────────────────────── */
+    #tela-login { display:none; align-items:center; justify-content:center;
+      min-height:100vh; background:linear-gradient(135deg,#6B3520 0%,#4A2218 100%); }
+    .login-card  { background:#fff; border-radius:12px; padding:40px; width:360px;
+      box-shadow:0 8px 32px rgba(0,0,0,.22); }
+    .login-card h1 { color:var(--primary); font-size:1.3rem; margin-bottom:4px; }
+    .login-card p  { color:#777; font-size:.83rem; margin-bottom:24px; }
+
+    /* ── Layout ────────────────────────────────────────────────────── */
+    #painel { display:none; }
+    header  { background:var(--primary); color:#fff; padding:13px 24px;
+      display:flex; align-items:center; justify-content:space-between; }
+    header h1   { font-size:1.05rem; font-weight:600; }
+    header small{ font-size:.78rem; opacity:.75; display:block; }
+    .btn-logout { background:transparent; color:#fff; border:1px solid rgba(255,255,255,.4);
+      border-radius:6px; padding:6px 14px; cursor:pointer; font-size:.82rem; font-family:inherit; }
+    .btn-logout:hover { background:rgba(255,255,255,.1); }
+
+    /* ── Tabs ──────────────────────────────────────────────────────── */
+    .tab-bar { background:#fff; border-bottom:2px solid #eee; padding:0 24px; display:flex; gap:0; }
+    .tab-btn { padding:13px 18px; border:none; background:none; cursor:pointer;
+      font-size:.88rem; color:#777; border-bottom:2px solid transparent;
+      margin-bottom:-2px; font-family:inherit; font-weight:500; transition:color .15s; }
+    .tab-btn.ativo  { color:var(--primary); border-bottom-color:var(--primary); }
+    .tab-btn:hover:not(.ativo) { color:var(--primary); }
+    .tab-btn:disabled { color:#ccc; cursor:default; }
+
+    /* ── Content ───────────────────────────────────────────────────── */
+    #conteudo-aba { padding:22px 24px; max-width:1200px; }
+    .aba-titulo   { font-size:1rem; color:var(--primary); font-weight:600; margin-bottom:4px; }
+    .aba-desc     { font-size:.82rem; color:#777; margin-bottom:18px; line-height:1.5; }
+
+    /* ── Table ─────────────────────────────────────────────────────── */
+    table { width:100%; border-collapse:collapse; background:#fff;
+      border-radius:10px; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,.08); }
+    th    { background:#f8f4f2; color:#555; font-size:.78rem; text-transform:uppercase;
+      letter-spacing:.05em; padding:10px 13px; text-align:left; font-weight:600; }
+    td    { padding:11px 13px; border-bottom:1px solid #f0f0f0; font-size:.86rem; color:#333; }
+    tr:last-child td { border-bottom:none; }
+    tr:hover td { background:#fdfaf9; }
+
+    /* ── Badges ─────────────────────────────────────────────────────── */
+    .badge          { display:inline-block; padding:3px 9px; border-radius:20px; font-size:.73rem; font-weight:600; }
+    .bg-ativo       { background:#e8f5e9; color:#2e7d32; }
+    .bg-trial       { background:#e3f2fd; color:#1565c0; }
+    .bg-suspenso    { background:#fff3e0; color:#e65100; }
+    .bg-cancelado   { background:#ffebee; color:#c62828; }
+    .bg-leitura     { background:#f3e5f5; color:#6a1b9a; }
+    .bg-stripe      { background:#ebe8ff; color:#5244cc; }
+    .bg-manual      { background:#fff8e1; color:#f57f17; }
+
+    /* ── Buttons ────────────────────────────────────────────────────── */
+    .btn         { padding:7px 14px; border-radius:6px; border:none; cursor:pointer;
+      font-size:.82rem; font-family:inherit; font-weight:500; }
+    .btn-primary { background:var(--primary); color:#fff; }
+    .btn-warning { background:#e65100; color:#fff; }
+    .btn-danger  { background:#c62828; color:#fff; }
+    .btn-outline { background:transparent; border:1px solid #ccc; color:#555; }
+    .btn-sm      { padding:5px 10px; font-size:.78rem; }
+    .btn-gap     { display:flex; gap:5px; flex-wrap:wrap; }
+
+    /* ── Form ───────────────────────────────────────────────────────── */
+    .fgroup       { margin-bottom:14px; }
+    .fgroup label { display:block; font-size:.8rem; font-weight:500; color:#555; margin-bottom:4px; }
+    .fgroup input, .fgroup select, .fgroup textarea
+      { width:100%; padding:9px 11px; border:1px solid #ddd; border-radius:6px;
+        font-family:inherit; font-size:.86rem; }
+    .fgroup input:focus, .fgroup select:focus, .fgroup textarea:focus
+      { outline:none; border-color:var(--primary); }
+    .fgroup textarea { resize:vertical; min-height:72px; }
+
+    /* ── Modal ──────────────────────────────────────────────────────── */
+    .modal-bg  { display:none; position:fixed; inset:0; background:rgba(0,0,0,.48); z-index:999;
+      align-items:center; justify-content:center; }
+    .modal-bg.aberto { display:flex; }
+    .modal     { background:#fff; border-radius:12px; padding:26px; width:460px;
+      max-width:95vw; max-height:90vh; overflow-y:auto; }
+    .modal h2  { font-size:1rem; color:var(--primary); margin-bottom:18px; }
+    .modal-ft  { display:flex; gap:8px; justify-content:flex-end; margin-top:18px; }
+
+    /* ── Misc ───────────────────────────────────────────────────────── */
+    .alert      { padding:12px 16px; border-radius:7px; margin-bottom:14px; font-size:.85rem; }
+    .alert-err  { background:#ffebee; color:#c62828; border-left:4px solid #c62828; }
+    .loading    { padding:40px; text-align:center; color:#aaa; font-size:.9rem; }
+    .toolbar    { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+    .placeholder-aba { padding:40px 24px; text-align:center; color:#aaa; font-size:.9rem; }
+  </style>
+</head>
+<body>
+
+<!-- ══ LOGIN ══════════════════════════════════════════════════════════ -->
+<div id="tela-login" style="display:flex">
+  <div class="login-card">
+    <h1>🔐 Admin FSG</h1>
+    <p>Acesso restrito — Meu Caixa Digital</p>
+    <div class="fgroup"><label>E-mail</label>
+      <input type="email" id="l-email" placeholder="admin@fsg.com.br" autocomplete="username">
+    </div>
+    <div class="fgroup"><label>Senha</label>
+      <input type="password" id="l-senha" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <div class="alert alert-err" id="l-erro" style="display:none"></div>
+    <button class="btn btn-primary" style="width:100%;padding:11px;font-size:.92rem" id="btn-entrar">Entrar</button>
+  </div>
+</div>
+
+<!-- ══ PAINEL ═════════════════════════════════════════════════════════ -->
+<div id="painel">
+  <header>
+    <div><h1>Admin FSG · Meu Caixa Digital</h1><small id="email-admin"></small></div>
+    <button class="btn-logout" id="btn-sair">Sair</button>
+  </header>
+  <div class="tab-bar">
+    <button class="tab-btn ativo" data-aba="empresas">Empresas</button>
+    <button class="tab-btn"       data-aba="assinaturas">Assinaturas</button>
+    <button class="tab-btn"       data-aba="comunicados">Comunicados</button>
+    <button class="tab-btn"       data-aba="erros">Erros</button>
+    <button class="tab-btn"       data-aba="feedback">Feedback</button>
+    <button class="tab-btn"       data-aba="manutencao">Manutenção</button>
+  </div>
+  <div id="conteudo-aba"><div class="loading">Carregando…</div></div>
+</div>
+
+<!-- ══ MODAL OVERRIDE ════════════════════════════════════════════════ -->
+<div class="modal-bg" id="m-override">
+  <div class="modal">
+    <h2>Ativar Assinatura — Override Manual</h2>
+    <input type="hidden" id="ov-id">
+    <div class="fgroup"><label>Plano</label>
+      <select id="ov-plano"><option value="standard">Standard</option><option value="profissional">Profissional</option></select>
+    </div>
+    <div class="fgroup"><label>Data de vencimento</label>
+      <input type="date" id="ov-venc">
+    </div>
+    <div class="fgroup"><label>Forma de pagamento / origem</label>
+      <select id="ov-forma">
+        <option value="cortesia">Cortesia / Gratuidade</option>
+        <option value="cartao">Cartão</option>
+        <option value="pix">PIX</option>
+        <option value="boleto">Boleto</option>
+        <option value="outro">Outro</option>
+      </select>
+    </div>
+    <div class="fgroup"><label>Observação (opcional)</label>
+      <textarea id="ov-obs" placeholder="Ex: correção de erro, parceria comercial…"></textarea>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-outline" id="btn-ov-cancelar">Cancelar</button>
+      <button class="btn btn-primary" id="btn-ov-confirmar">Confirmar Override</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL CONFIRMAR ═══════════════════════════════════════════════ -->
+<div class="modal-bg" id="m-confirmar">
+  <div class="modal">
+    <h2 id="mc-titulo">Confirmar Ação</h2>
+    <p id="mc-texto" style="color:#555;font-size:.88rem;line-height:1.55;margin-bottom:4px"></p>
+    <div class="modal-ft">
+      <button class="btn btn-outline" id="btn-mc-cancelar">Cancelar</button>
+      <button class="btn btn-danger"  id="btn-mc-ok">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { auth, db }   from './firebase-config.js';
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc,
+  query, orderBy, serverTimestamp, Timestamp }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+// ── Estado ─────────────────────────────────────────────────────────────
+let _empresas   = [];
+let _abaAtiva   = 'empresas';
+let _acaoPend   = null;
+
+// ── Auth ───────────────────────────────────────────────────────────────
+onAuthStateChanged(auth, async (user) => {
+  if (!user) { mostrarLogin(); return; }
+  try {
+    const snap = await getDoc(doc(db, 'usuarios', user.uid));
+    if (!snap.exists() || snap.data().superAdmin !== true) {
+      await signOut(auth); mostrarAcessoNegado(); return;
+    }
+    document.getElementById('email-admin').textContent = user.email;
+    mostrarPainel();
+    await carregarEmpresas();
+    await renderAba('empresas');
+  } catch (e) {
+    console.error('[AdminFSG] erro auth:', e);
+    mostrarAcessoNegado();
+  }
+});
+
+function mostrarLogin()  {
+  document.getElementById('tela-login').style.display = 'flex';
+  document.getElementById('painel').style.display = 'none';
+}
+function mostrarPainel() {
+  document.getElementById('tela-login').style.display = 'none';
+  document.getElementById('painel').style.display = 'block';
+}
+function mostrarAcessoNegado() {
+  document.body.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f5f5f5">
+    <div style="text-align:center;padding:40px;background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.1)">
+      <div style="font-size:3rem;margin-bottom:14px">🚫</div>
+      <h2 style="color:#c62828;margin-bottom:8px">Acesso negado</h2>
+      <p style="color:#666;margin-bottom:20px">Você não possui permissão de superAdmin.</p>
+      <a href="/login.html" style="color:#6B3520;font-weight:500">← Voltar ao login</a>
+    </div></div>`;
+}
+
+// ── Login form ─────────────────────────────────────────────────────────
+document.getElementById('btn-entrar').addEventListener('click', async () => {
+  const email = document.getElementById('l-email').value.trim();
+  const senha = document.getElementById('l-senha').value;
+  const erroEl = document.getElementById('l-erro');
+  erroEl.style.display = 'none';
+  if (!email || !senha) { erroEl.textContent = 'Preencha e-mail e senha.'; erroEl.style.display = 'block'; return; }
+  try {
+    await signInWithEmailAndPassword(auth, email, senha);
+  } catch (e) {
+    erroEl.textContent = ['auth/invalid-credential','auth/wrong-password','auth/user-not-found'].includes(e.code)
+      ? 'E-mail ou senha incorretos.' : 'Erro ao entrar. Tente novamente.';
+    erroEl.style.display = 'block';
+  }
+});
+document.getElementById('l-senha').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('btn-entrar').click(); });
+document.getElementById('btn-sair').addEventListener('click', async () => { await signOut(auth); mostrarLogin(); });
+
+// ── Tabs ───────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('ativo'));
+    btn.classList.add('ativo');
+    _abaAtiva = btn.dataset.aba;
+    await renderAba(_abaAtiva);
+  });
+});
+
+// ── Dados ──────────────────────────────────────────────────────────────
+async function carregarEmpresas() {
+  const snap = await getDocs(collection(db, 'empresas'));
+  _empresas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  _empresas.sort((a, b) => {
+    const ta = toMs(a.trialExpira) ?? Infinity;
+    const tb = toMs(b.trialExpira) ?? Infinity;
+    return ta - tb;
+  });
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────
+const toMs   = v => v?.toMillis ? v.toMillis() : (v ? Number(v) : null);
+const fmtDt  = ts => { if (!ts) return '—'; const d = ts?.toDate ? ts.toDate() : new Date(ts); return d.toLocaleDateString('pt-BR'); };
+const planoLabel = p => p === 'profissional' ? 'Profissional' : 'Standard';
+
+function diasTrialRestantes(emp) {
+  const exp = toMs(emp.trialExpira);
+  if (!exp) return null;
+  return Math.ceil((exp - Date.now()) / 86400000);
+}
+
+function badgeStatus(emp) {
+  if (emp.assinaturaAtiva) return '<span class="badge bg-ativo">Ativo</span>';
+  if (emp.status === 'suspenso')  return '<span class="badge bg-suspenso">Suspenso</span>';
+  if (emp.status === 'cancelado') return '<span class="badge bg-cancelado">Cancelado</span>';
+  const d = diasTrialRestantes(emp);
+  if (d !== null && d > 0)  return `<span class="badge bg-trial">Trial ${d}d</span>`;
+  if (d !== null && d <= 0) return '<span class="badge bg-leitura">Trial Expirado</span>';
+  return '<span class="badge bg-leitura">Sem Acesso</span>';
+}
+
+function badgeOrigem(emp) {
+  if (emp.origemAssinatura === 'manual')  return '<span class="badge bg-manual">Manual</span>';
+  if (emp.stripeSubscriptionId)           return '<span class="badge bg-stripe">Stripe</span>';
+  return '<span style="color:#bbb;font-size:.8rem">—</span>';
+}
+
+// ── Render ─────────────────────────────────────────────────────────────
+async function renderAba(aba) {
+  const el = document.getElementById('conteudo-aba');
+  el.innerHTML = '<div class="loading">Carregando…</div>';
+  if      (aba === 'empresas')    { el.innerHTML = htmlEmpresas();    bindAcoes(); }
+  else if (aba === 'assinaturas') { el.innerHTML = htmlAssinaturas(); bindAcoes(); }
+  else if (aba === 'comunicados') { el.innerHTML = htmlComunicados(); bindComunicados(); }
+  else if (aba === 'erros')       { el.innerHTML = await htmlErros();     bindErros(); }
+  else if (aba === 'feedback')    { el.innerHTML = await htmlFeedback();  bindFeedback(); }
+  else if (aba === 'manutencao')  { el.innerHTML = await htmlManutencao(); bindManutencao(); }
+}
+
+// ══ ABA COMUNICADOS ════════════════════════════════════════════════════
+function htmlComunicados() {
+  const opts = _empresas.map(e =>
+    `<option value="${e.id}">${e.nomeEmpresa || e.id}</option>`).join('');
+  return `
+    <p class="aba-titulo">Enviar Comunicado</p>
+    <p class="aba-desc">Aparece em tempo real no dashboard do lojista via onSnapshot.</p>
+    <div style="max-width:560px">
+      <div class="fgroup"><label>Destinatário</label>
+        <select id="com-dest">
+          <option value="todos">📢 Todas as empresas (${_empresas.length})</option>
+          ${opts}
+        </select>
+      </div>
+      <div class="fgroup"><label>Mensagem</label>
+        <textarea id="com-msg" placeholder="Digite o comunicado…" style="min-height:100px"></textarea>
+      </div>
+      <div class="fgroup"><label>Texto do botão de ação <small style="color:#aaa">(opcional)</small></label>
+        <input type="text" id="com-botao" placeholder="Ex: Ver detalhes, Assinar agora…">
+      </div>
+      <button class="btn btn-primary" id="btn-enviar-com">📤 Enviar Comunicado</button>
+      <div id="com-retorno" style="margin-top:12px"></div>
+    </div>`;
+}
+
+function bindComunicados() {
+  document.getElementById('btn-enviar-com').addEventListener('click', async () => {
+    const dest   = document.getElementById('com-dest').value;
+    const msg    = document.getElementById('com-msg').value.trim();
+    const botao  = document.getElementById('com-botao').value.trim();
+    const ret    = document.getElementById('com-retorno');
+    if (!msg) { ret.innerHTML = '<div class="alert alert-err">Mensagem obrigatória.</div>'; return; }
+
+    const payload = { mensagem: msg, criadoEm: serverTimestamp(), ...(botao && { botaoAcao: botao }) };
+    try {
+      const alvos = dest === 'todos' ? _empresas.map(e => e.id) : [dest];
+      await Promise.all(alvos.map(id => setDoc(doc(db, 'comunicados', id), payload)));
+      ret.innerHTML = `<div class="alert" style="background:#e8f5e9;color:#2e7d32;border-left:4px solid #2e7d32">
+        ✅ Comunicado enviado para ${alvos.length} empresa(s).</div>`;
+      document.getElementById('com-msg').value = '';
+      document.getElementById('com-botao').value = '';
+    } catch (e) { ret.innerHTML = `<div class="alert alert-err">Erro: ${e.message}</div>`; }
+  });
+}
+
+// ══ ABA ERROS ══════════════════════════════════════════════════════════
+async function htmlErros() {
+  const snap = await getDocs(query(collection(db, 'erros_sistema'), orderBy('timestamp', 'desc')));
+  if (snap.empty) return '<div class="loading">Nenhum erro registrado.</div>';
+  const linhas = snap.docs.map(d => {
+    const e = d.data();
+    const ts = e.timestamp?.toDate ? e.timestamp.toDate().toLocaleString('pt-BR') : '—';
+    return `<tr>
+      <td>${ts}</td>
+      <td><span class="badge bg-cancelado">${e.tipo || '—'}</span></td>
+      <td style="max-width:300px;word-break:break-word">${e.mensagem || '—'}</td>
+      <td>${e.modulo || '—'}</td>
+      <td style="color:#aaa;font-size:.78rem">${e.empresaId ? e.empresaId.slice(0,8)+'…' : '—'}</td>
+      <td><button class="btn btn-danger btn-sm" data-del-erro="${d.id}">Apagar</button></td>
+    </tr>`;
+  }).join('');
+  return `
+    <div class="toolbar">
+      <div><p class="aba-titulo">Erros do Sistema (${snap.size})</p>
+           <p class="aba-desc">Não somem automaticamente — apagar manualmente.</p></div>
+      <button class="btn btn-danger btn-sm" id="btn-apagar-todos-erros">Apagar Todos</button>
+    </div>
+    <table><thead><tr>
+      <th>Quando</th><th>Tipo</th><th>Mensagem</th><th>Módulo</th><th>Empresa</th><th></th>
+    </tr></thead><tbody>${linhas}</tbody></table>`;
+}
+
+function bindErros() {
+  document.querySelectorAll('[data-del-erro]').forEach(btn =>
+    btn.addEventListener('click', async () => {
+      if (!confirm('Apagar este erro?')) return;
+      await deleteDoc(doc(db, 'erros_sistema', btn.dataset.delErro));
+      renderAba('erros');
+    })
+  );
+  document.getElementById('btn-apagar-todos-erros')?.addEventListener('click', async () => {
+    if (!confirm('Apagar TODOS os erros? Esta ação não pode ser desfeita.')) return;
+    const snap = await getDocs(collection(db, 'erros_sistema'));
+    await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
+    renderAba('erros');
+  });
+}
+
+// ══ ABA FEEDBACK ═══════════════════════════════════════════════════════
+async function htmlFeedback() {
+  const snap = await getDocs(query(collection(db, 'feedback'), orderBy('timestamp', 'desc')));
+  if (snap.empty) return '<div class="loading">Nenhum feedback registrado.</div>';
+  const linhas = snap.docs.map(d => {
+    const f  = d.data();
+    const ts = f.timestamp?.toDate ? f.timestamp.toDate().toLocaleString('pt-BR') : '—';
+    const resolvido = f.resolvido === true;
+    return `<tr style="opacity:${resolvido ? '.55' : '1'}">
+      <td>${ts}</td>
+      <td>${f.plano || '—'}</td>
+      <td style="max-width:340px;word-break:break-word">${f.mensagem || '—'}</td>
+      <td>${resolvido
+        ? '<span class="badge bg-ativo">Resolvido</span>'
+        : '<span class="badge bg-trial">Aberto</span>'}</td>
+      <td><div class="btn-gap">
+        <button class="btn btn-outline btn-sm" data-res-fb="${d.id}" data-val="${resolvido ? 'false' : 'true'}">
+          ${resolvido ? 'Reabrir' : '✔ Resolver'}
+        </button>
+        <button class="btn btn-danger btn-sm" data-del-fb="${d.id}">Apagar</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+  return `
+    <div class="toolbar">
+      <div><p class="aba-titulo">Feedback dos Lojistas (${snap.size})</p>
+           <p class="aba-desc">"Marcar como resolvido" não apaga o registro.</p></div>
+    </div>
+    <table><thead><tr>
+      <th>Quando</th><th>Plano</th><th>Mensagem</th><th>Status</th><th>Ações</th>
+    </tr></thead><tbody>${linhas}</tbody></table>`;
+}
+
+function bindFeedback() {
+  document.querySelectorAll('[data-res-fb]').forEach(btn =>
+    btn.addEventListener('click', async () => {
+      const val = btn.dataset.val === 'true';
+      await updateDoc(doc(db, 'feedback', btn.dataset.resFb), { resolvido: val });
+      renderAba('feedback');
+    })
+  );
+  document.querySelectorAll('[data-del-fb]').forEach(btn =>
+    btn.addEventListener('click', async () => {
+      if (!confirm('Apagar este feedback?')) return;
+      await deleteDoc(doc(db, 'feedback', btn.dataset.delFb));
+      renderAba('feedback');
+    })
+  );
+}
+
+// ══ ABA MANUTENÇÃO ═════════════════════════════════════════════════════
+async function htmlManutencao() {
+  let cfg = {};
+  try {
+    const snap = await getDoc(doc(db, 'sistema', 'config'));
+    if (snap.exists()) cfg = snap.data();
+  } catch (_) {}
+
+  const inicio = cfg.manutencaoInicio?.toDate
+    ? cfg.manutencaoInicio.toDate().toISOString().slice(0,16) : '';
+  const fim    = cfg.manutencaoFim?.toDate
+    ? cfg.manutencaoFim.toDate().toISOString().slice(0,16) : '';
+
+  return `
+    <p class="aba-titulo">Manutenção Programada</p>
+    <p class="aba-desc">Exibe banner no app do lojista. modoLeituraGlobal bloqueia escritas em todas as contas.</p>
+    <div style="max-width:520px">
+      <div class="fgroup"><label>Texto do aviso de manutenção</label>
+        <textarea id="man-texto" placeholder="Ex: Sistema em manutenção. Previsão de retorno: 22h."
+          style="min-height:80px">${cfg.textoManutencao || ''}</textarea>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="fgroup"><label>Início previsto</label>
+          <input type="datetime-local" id="man-inicio" value="${inicio}">
+        </div>
+        <div class="fgroup"><label>Fim previsto</label>
+          <input type="datetime-local" id="man-fim" value="${fim}">
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.88rem;font-weight:500">
+          <input type="checkbox" id="man-ativa" ${cfg.manutencaoAtiva ? 'checked' : ''}
+            style="width:16px;height:16px;accent-color:var(--primary)">
+          Manutenção ativa agora
+        </label>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.88rem;font-weight:500;color:#c62828">
+          <input type="checkbox" id="man-leitura" ${cfg.modoLeituraGlobal ? 'checked' : ''}
+            style="width:16px;height:16px;accent-color:#c62828">
+          ⚠️ Modo leitura global (bloqueia escrita em TODAS as contas)
+        </label>
+      </div>
+      <button class="btn btn-primary" id="btn-salvar-man">Salvar Configuração</button>
+      <div id="man-retorno" style="margin-top:12px"></div>
+    </div>`;
+}
+
+function bindManutencao() {
+  document.getElementById('btn-salvar-man').addEventListener('click', async () => {
+    const ret    = document.getElementById('man-retorno');
+    const texto  = document.getElementById('man-texto').value.trim();
+    const ativa  = document.getElementById('man-ativa').checked;
+    const leit   = document.getElementById('man-leitura').checked;
+    const inicioStr = document.getElementById('man-inicio').value;
+    const fimStr    = document.getElementById('man-fim').value;
+
+    if (leit && !confirm('Ativar modo leitura global bloqueia TODAS as contas. Confirmar?')) return;
+
+    try {
+      const payload = {
+        textoManutencao:  texto || null,
+        manutencaoAtiva:  ativa,
+        modoLeituraGlobal: leit,
+        manutencaoInicio: inicioStr ? Timestamp.fromDate(new Date(inicioStr)) : null,
+        manutencaoFim:    fimStr    ? Timestamp.fromDate(new Date(fimStr))    : null,
+      };
+      await setDoc(doc(db, 'sistema', 'config'), payload, { merge: true });
+      ret.innerHTML = '<div class="alert" style="background:#e8f5e9;color:#2e7d32;border-left:4px solid #2e7d32">✅ Configuração salva.</div>';
+    } catch (e) { ret.innerHTML = `<div class="alert alert-err">Erro: ${e.message}</div>`; }
+  });
+}
+
+// ── Aba Empresas ────────────────────────────────────────────────────────
+function htmlEmpresas() {
+  if (!_empresas.length) return '<div class="loading">Nenhuma empresa cadastrada.</div>';
+  const linhas = _empresas.map(emp => {
+    const d = diasTrialRestantes(emp);
+    const triColor = (!emp.assinaturaAtiva && d !== null && d <= 7) ? '#c62828' : 'inherit';
+    const triLabel = emp.assinaturaAtiva ? '—' : (d !== null ? `${d > 0 ? '' : ''}${d}d` : '—');
+    return `<tr>
+      <td><strong>${emp.nomeEmpresa || '—'}</strong><br><small style="color:#aaa">${emp.cpfCnpj || ''}</small></td>
+      <td>${planoLabel(emp.plano)}</td>
+      <td>${badgeStatus(emp)}</td>
+      <td style="color:${triColor};font-weight:500">${triLabel}</td>
+      <td>${fmtDt(emp.createdAt)}</td>
+      <td style="color:#555">${emp.email || '—'}</td>
+    </tr>`;
+  }).join('');
+  return `<div class="toolbar">
+    <div><p class="aba-titulo">${_empresas.length} empresa(s) cadastrada(s)</p>
+         <p class="aba-desc">Ordenadas por proximidade de expiração do trial.</p></div>
+    <button class="btn btn-outline btn-sm" id="btn-atualizar">↻ Atualizar</button>
+  </div>
+  <table><thead><tr>
+    <th>Empresa</th><th>Plano</th><th>Status</th><th>Trial</th><th>Cadastro</th><th>E-mail</th>
+  </tr></thead><tbody>${linhas}</tbody></table>`;
+}
+
+// ── Aba Assinaturas ─────────────────────────────────────────────────────
+function htmlAssinaturas() {
+  if (!_empresas.length) return '<div class="loading">Nenhuma empresa cadastrada.</div>';
+  const linhas = _empresas.map(emp => {
+    const stripeLink = emp.stripeCustomerId
+      ? `<a href="https://dashboard.stripe.com/customers/${emp.stripeCustomerId}" target="_blank"
+           style="color:#5244cc;font-size:.8rem;text-decoration:none">↗ Abrir no Stripe</a>`
+      : '<span style="color:#bbb;font-size:.8rem">—</span>';
+    return `<tr data-id="${emp.id}">
+      <td><strong>${emp.nomeEmpresa || '—'}</strong></td>
+      <td>${badgeStatus(emp)}</td>
+      <td>${badgeOrigem(emp)}</td>
+      <td>${planoLabel(emp.plano)}</td>
+      <td>${fmtDt(emp.dataVencimento)}</td>
+      <td>${stripeLink}</td>
+      <td><div class="btn-gap">
+        <button class="btn btn-primary btn-sm" data-acao="ativar"    data-id="${emp.id}">Ativar</button>
+        <button class="btn btn-warning btn-sm" data-acao="suspender" data-id="${emp.id}">Suspender</button>
+        <button class="btn btn-danger  btn-sm" data-acao="cancelar"  data-id="${emp.id}">Cancelar</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+  return `<div class="toolbar">
+    <div><p class="aba-titulo">Gestão de Assinaturas</p>
+         <p class="aba-desc">Override manual para casos excepcionais. O Stripe atualiza automaticamente no fluxo normal.</p></div>
+    <button class="btn btn-outline btn-sm" id="btn-atualizar">↻ Atualizar</button>
+  </div>
+  <table><thead><tr>
+    <th>Empresa</th><th>Status</th><th>Origem</th><th>Plano</th><th>Vencimento</th><th>Stripe</th><th>Ações</th>
+  </tr></thead><tbody>${linhas}</tbody></table>`;
+}
+
+// ── Bind ────────────────────────────────────────────────────────────────
+function bindAcoes() {
+  document.getElementById('btn-atualizar')?.addEventListener('click', async () => {
+    await carregarEmpresas(); renderAba(_abaAtiva);
+  });
+  document.querySelectorAll('[data-acao]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id  = btn.dataset.id;
+      const emp = _empresas.find(e => e.id === id);
+      if (!emp) return;
+      if (btn.dataset.acao === 'ativar') { abrirOverride(emp); return; }
+      if (btn.dataset.acao === 'suspender') {
+        abrirConfirmar(`Suspender "${emp.nomeEmpresa}"?`,
+          'O acesso será bloqueado após 48 horas de carência.',
+          '#e65100', () => executar('suspender', id));
+      }
+      if (btn.dataset.acao === 'cancelar') {
+        abrirConfirmar(`Cancelar "${emp.nomeEmpresa}"?`,
+          'Iniciará contagem de 90 dias para exclusão definitiva dos dados.',
+          '#c62828', () => executar('cancelar', id));
+      }
+    });
+  });
+}
+
+// ── Modal override ──────────────────────────────────────────────────────
+function abrirOverride(emp) {
+  document.getElementById('ov-id').value   = emp.id;
+  document.getElementById('ov-plano').value = emp.plano || 'standard';
+  document.getElementById('ov-obs').value  = '';
+  const prox = new Date(); prox.setMonth(prox.getMonth() + 1);
+  document.getElementById('ov-venc').value = prox.toISOString().slice(0, 10);
+  document.getElementById('m-override').classList.add('aberto');
+}
+document.getElementById('btn-ov-cancelar') .addEventListener('click', () => fecharModal('m-override'));
+document.getElementById('btn-ov-confirmar').addEventListener('click', async () => {
+  const id     = document.getElementById('ov-id').value;
+  const plano  = document.getElementById('ov-plano').value;
+  const vencStr= document.getElementById('ov-venc').value;
+  const forma  = document.getElementById('ov-forma').value;
+  const obs    = document.getElementById('ov-obs').value.trim();
+  if (!vencStr) { alert('Informe a data de vencimento.'); return; }
+  try {
+    await updateDoc(doc(db, 'empresas', id), {
+      assinaturaAtiva: true, status: 'ativo', plano,
+      dataVencimento: Timestamp.fromDate(new Date(vencStr + 'T23:59:59')),
+      stripeFormaPagamento: forma,
+      origemAssinatura: 'manual',
+      obsManual: obs || null,
+    });
+    fecharModal('m-override');
+    await carregarEmpresas(); renderAba(_abaAtiva);
+  } catch (e) { alert('Erro ao aplicar override: ' + e.message); }
+});
+
+// ── Modal confirmar ─────────────────────────────────────────────────────
+function abrirConfirmar(titulo, texto, cor, callback) {
+  document.getElementById('mc-titulo').textContent = titulo;
+  document.getElementById('mc-texto').textContent  = texto;
+  document.getElementById('btn-mc-ok').style.background = cor;
+  _acaoPend = callback;
+  document.getElementById('m-confirmar').classList.add('aberto');
+}
+document.getElementById('btn-mc-cancelar').addEventListener('click', () => fecharModal('m-confirmar'));
+document.getElementById('btn-mc-ok').addEventListener('click', async () => {
+  fecharModal('m-confirmar');
+  if (_acaoPend) { await _acaoPend(); _acaoPend = null; }
+});
+
+function fecharModal(id) { document.getElementById(id).classList.remove('aberto'); }
+['m-override','m-confirmar'].forEach(id =>
+  document.getElementById(id).addEventListener('click', e => { if (e.target.id === id) fecharModal(id); })
+);
+
+// ── Ações Firestore ─────────────────────────────────────────────────────
+async function executar(acao, id) {
+  try {
+    if (acao === 'suspender') {
+      await updateDoc(doc(db, 'empresas', id), {
+        status: 'suspenso', suspensaoEm: serverTimestamp(), assinaturaAtiva: false,
+      });
+    } else if (acao === 'cancelar') {
+      await updateDoc(doc(db, 'empresas', id), {
+        assinaturaAtiva: false, status: 'cancelado',
+        dataInicioContagem90Dias: serverTimestamp(), stripeSubscriptionId: null,
+      });
+    }
+    await carregarEmpresas(); renderAba(_abaAtiva);
+  } catch (e) { alert('Erro: ' + e.message); }
+}
+</script>
+</body>
+</html>

@@ -67,3 +67,9 @@ node_modules/
 
 # dataconnect generated files
 .dataconnect
+
+# Credencial de serviço Firebase (NUNCA commitar)
+serviceAccount.json
+
+# Claude Code configurações locais
+.claude/settings.local.json

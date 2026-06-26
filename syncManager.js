@@ -18,6 +18,7 @@ import {
   updateDoc,
   query,
   where,
+  orderBy,
   onSnapshot,
   getDocFromServer,
   serverTimestamp,
@@ -343,6 +344,23 @@ async function baixarKitOffline() {
     assinaturaAtiva:      empresa.assinaturaAtiva || false,
   };
 
+  // Popular kit com produtos e clientes para uso offline
+  // Sem orderBy para evitar índice composto — ordenação feita client-side
+  try {
+    const [prodSnap, cliSnap] = await Promise.all([
+      getDocs(query(collection(db, "empresas", _empresaId, "produtos"), where("ativo", "==", true))),
+      getDocs(query(collection(db, "empresas", _empresaId, "clientes"), where("ativo", "==", true))),
+    ]);
+    kit.produtos = prodSnap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (a.nome || "").localeCompare(b.nome || "", "pt-BR"));
+    kit.clientes = cliSnap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (a.nome || "").localeCompare(b.nome || "", "pt-BR"));
+  } catch (err) {
+    console.warn("Kit: falha ao carregar produtos/clientes:", err.message);
+  }
+
   _salvarKitOffline(kit);
 
   // SC-008: timestamp de atualização verificável
@@ -585,8 +603,10 @@ function _atualizarSessaoComDadosFrescos(kit) {
     // Atualizar campos voláteis que podem mudar sem novo login
     if (kit.status          !== undefined) sessao.status          = kit.status;
     if (kit.assinaturaAtiva !== undefined) sessao.assinaturaAtiva = kit.assinaturaAtiva;
+    if (kit.plano           !== undefined) sessao.plano           = kit.plano;
 
     localStorage.setItem("mc_sessao", JSON.stringify(sessao));
+    window.dispatchEvent(new CustomEvent("mc:sessao-atualizada", { detail: sessao }));
   } catch { /* silencioso — EC-02 */ }
 }
 

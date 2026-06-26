@@ -43,6 +43,23 @@ service cloud.firestore {
       return pertenceEmpresa(empresaId);
     }
 
+    // Verifica se é o próprio usuário criando sua empresa (cadastro inicial)
+    // Usado para permitir leitura de empresas/{uid} antes de usuarios/{uid} existir
+    function isCadastrando(empresaId) {
+      return isAuth() && uid() == empresaId;
+    }
+
+    // Lê o documento da empresa (para checagem de plano nas rules)
+    function getEmpresa(empresaId) {
+      return get(/databases/$(database)/documents/empresas/$(empresaId)).data;
+    }
+
+    // Verifica se a empresa está no plano Profissional
+    // Usado para gates server-side de recursos proOnly (ex: folha de pagamento)
+    function isPlanoProfissional(empresaId) {
+      return getEmpresa(empresaId).plano == "profissional";
+    }
+
     // ── SISTEMA (manutenção, comunicados, config) ──────────────────
     // Leitura pública — sistema/config é lido antes do login
     // Escrita somente superAdmin
@@ -77,25 +94,25 @@ service cloud.firestore {
     // create: permitido quando uid == usuarioId (cadastro inicial)
     // Regra anterior tinha create: false — bloqueava o cadastro
     match /usuarios/{usuarioId} {
-      allow read:   if isAuth() && uid() == usuarioId;
+      allow read:   if isAuth() && (uid() == usuarioId || (isAdmin() && resource.data.empresaId == uid()));
       allow create: if isAuth() && uid() == usuarioId;
       // Escalada de privilégios bloqueada: usuário só pode alterar campos de preferência.
       // Campos sensíveis (perfil, superAdmin, empresaId) só modificáveis por isSuperAdmin().
       allow update: if (isAuth() && uid() == usuarioId &&
                         !request.resource.data.diff(resource.data).affectedKeys()
                           .hasAny(["perfil", "superAdmin", "empresaId"]))
+                     || (isAdmin() && resource.data.empresaId == uid() &&
+                         !request.resource.data.diff(resource.data).affectedKeys()
+                           .hasAny(["perfil", "superAdmin", "empresaId"]))
                      || isSuperAdmin();
       allow delete: if false;
     }
 
     // ── EMPRESA ────────────────────────────────────────────────────
     match /empresas/{empresaId} {
-      // Leitura: qualquer usuário autenticado OU membro da empresa
-      // isAuth() é avaliado PRIMEIRO (short-circuit) para evitar que getUsuario()
-      // falhe em cadastros onde usuarios/{uid} ainda não existe.
-      // TODO: a query de CPF/CNPJ durante cadastro precisará ser migrada para
-      //       Cloud Function com transação atômica — ver CLAUDE.md (M22)
-      allow read:   if isAuth() || isAdminOuOperador(empresaId);
+      // Leitura: usuário lendo o próprio documento (cadastro) OU membro da empresa
+      // isCadastrando() cobre o caso onde usuarios/{uid} ainda não existe
+      allow read:   if isCadastrando(empresaId) || isAdminOuOperador(empresaId);
 
       // create: permitido quando o uid do usuário criando == empresaId (cadastro inicial)
       allow create: if isAuth() && uid() == empresaId;
@@ -132,10 +149,10 @@ service cloud.firestore {
         allow write: if pertenceEmpresa(empresaId) && isAdmin();
       }
 
-      // Produtos
+      // Produtos — escrita somente admin (operador só lê)
       match /produtos/{produtoId} {
         allow read:  if isAdminOuOperador(empresaId);
-        allow write: if isAdminOuOperador(empresaId);
+        allow write: if pertenceEmpresa(empresaId) && isAdmin();
       }
 
       // Estoque
@@ -185,16 +202,22 @@ service cloud.firestore {
         allow write: if pertenceEmpresa(empresaId) && isAdmin();
       }
 
-      // Folha de pagamento
+      // Folha de pagamento — recurso proOnly: exige plano Profissional no servidor
       match /folha/{folhaId} {
-        allow read:  if pertenceEmpresa(empresaId) && isAdmin();
-        allow write: if pertenceEmpresa(empresaId) && isAdmin();
+        allow read:  if pertenceEmpresa(empresaId) && isAdmin() && isPlanoProfissional(empresaId);
+        allow write: if pertenceEmpresa(empresaId) && isAdmin() && isPlanoProfissional(empresaId);
       }
 
       // Recibos
       match /recibos/{reciboId} {
         allow read:  if pertenceEmpresa(empresaId) && isAdmin();
         allow write: if pertenceEmpresa(empresaId) && isAdmin();
+      }
+
+      // Convites de operador — admin lê para obter resetLink
+      match /convites/{conviteId} {
+        allow read:  if pertenceEmpresa(empresaId) && isAdmin();
+        allow write: if false;
       }
 
       // Comandos Admin → Operador
@@ -219,4 +242,3 @@ service cloud.firestore {
     }
   }
 }
-       

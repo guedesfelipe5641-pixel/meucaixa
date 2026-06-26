@@ -11,10 +11,6 @@ import { notificar }                 from "./notificacoes.js";
 // standard < profissional
 const HIERARQUIA = { standard: 1, profissional: 2 };
 
-// ─── AÇÕES BLOQUEADAS OFFLINE ──────────────────────────────────────
-// Somente crediário (conforme PROJETO.md e briefing)
-const ACOES_BLOQUEADAS_OFFLINE = ["crediario"];
-
 // ─── PLAN GUARD ────────────────────────────────────────────────────
 /**
  * Verifica se o plano atual do usuário atende ao plano mínimo requerido.
@@ -105,33 +101,6 @@ export function verificarModoLeitura() {
   return true;
 }
 
-// ─── VERIFICAR ACESSO OFFLINE ──────────────────────────────────────
-/**
- * Verifica navigator.onLine e bloqueia ações não permitidas offline.
- * Ações bloqueadas: "crediario" (conforme PROJETO.md).
- * Para ações desconhecidas: retorna true por padrão (EC-105).
- *
- * @param {string} acao - Nome da ação (ex: "crediario", "vendas")
- * @returns {boolean} false se bloqueado, true se permitido
- */
-export function verificarAcessoOffline(acao) {
-  // Se online: sempre permitido
-  if (navigator.onLine) return true;
-
-  // Verifica se a ação está na lista de bloqueadas offline
-  if (ACOES_BLOQUEADAS_OFFLINE.includes(acao)) {
-    notificar(
-      "bloqueio",
-      "Sem conexão",
-      "O módulo de Crediário requer conexão com a internet. Conecte-se e tente novamente."
-    );
-    return false;
-  }
-
-  // EC-105: ação desconhecida — permissivo por padrão
-  return true;
-}
-
 // ─── HELPERS PRIVADOS ──────────────────────────────────────────────
 
 /**
@@ -158,7 +127,7 @@ function _motivoSomenteLeitura(sessao) {
  */
 function _aplicarModoLeitura(motivo) {
   // (a) Desabilitar elementos de escrita (SC-106)
-  const elementos = document.querySelectorAll('[data-acao="escrita"]');
+  const elementos = document.querySelectorAll('[data-acao="escrita"], [data-acao="salvar"], [data-acao="pagar"]');
   elementos.forEach(el => {
     el.disabled = true;
     el.setAttribute("aria-disabled", "true");

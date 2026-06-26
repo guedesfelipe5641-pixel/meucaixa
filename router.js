@@ -5,8 +5,8 @@
 // ╚══════════════════════════════════════════════════════════════════╝
 
 import { notificar, renderSino } from "./notificacoes.js";
-import { planGuard }             from "./planGuard.js";
-import { logout }                from "./auth.js";
+import { planGuard, verificarModoLeitura } from "./planGuard.js";
+import { logout, calcularAcesso } from "./auth.js";
 import { registrarErro }         from "./utils.js";
 
 // ─── MAPA DE ROTAS ─────────────────────────────────────────────────
@@ -66,8 +66,8 @@ const ROTAS = {
     adminOnly:   false,
     proOnly:     false,
     onlineOnly:  false,
-    group:       null,
-    drawerOnly:  false,
+    group:       "Inventário",
+    drawerOnly:  true,
     // Operador: somente leitura (lógica implementada no módulo)
   },
   clientes: {
@@ -160,6 +160,24 @@ const ROTAS = {
     group:      "Sistema",
     drawerOnly: true,
   },
+};
+
+// ─── ÍCONES SVG POR ROTA ───────────────────────────────────────────
+const ICONS = {
+  dashboard:      `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>`,
+  caixa:          `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8a2 2 0 0 0-2 2v2h12V5a2 2 0 0 0-2-2z"/><circle cx="12" cy="14" r="2"/></svg>`,
+  vendas:         `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>`,
+  estoque:        `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>`,
+  produtos:       `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>`,
+  clientes:       `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+  fornecedores:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 6v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>`,
+  colaboradores:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
+  crediario:      `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>`,
+  despesas:       `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`,
+  fluxo:          `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>`,
+  folhaPagamento: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>`,
+  recibos:        `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`,
+  configuracoes:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
 };
 
 // ─── ROTA PADRÃO ───────────────────────────────────────────────────
@@ -322,6 +340,16 @@ export async function navigate(routeId) {
     } else {
       _renderizarPlaceholder(container, rota.label);
     }
+
+    // Aplicar modo somente leitura após cada render (trial expirado, suspensão)
+    if (calcularAcesso({
+      status:          _sessao?.status,
+      assinaturaAtiva: _sessao?.assinaturaAtiva,
+      trialExpira:     _sessao?.trialExpira,
+      suspensaoEm:     _sessao?.suspensaoEm,
+    }) === "somente_leitura") {
+      verificarModoLeitura();
+    }
   } catch {
     // Módulo ainda não implementado → placeholder
     _renderizarPlaceholder(container, rota.label);
@@ -357,6 +385,33 @@ export function iniciarRouter(sessao) {
     const rota = window.location.hash.replace("#", "") || ROTA_PADRAO;
     navigate(rota);
   });
+
+  // Reagir a mudanças de sessao (plano/status/acesso) detectadas em background
+  window.addEventListener("mc:sessao-atualizada", (e) => {
+    if (!e.detail) return;
+    const acessoAnterior = calcularAcesso({
+      status:          _sessao?.status,
+      assinaturaAtiva: _sessao?.assinaturaAtiva,
+      trialExpira:     _sessao?.trialExpira,
+      suspensaoEm:     _sessao?.suspensaoEm,
+    });
+    _sessao = e.detail;
+    _atualizarMenuPlano(_sessao.plano || "standard");
+    const acessoNovo = calcularAcesso({
+      status:          _sessao?.status,
+      assinaturaAtiva: _sessao?.assinaturaAtiva,
+      trialExpira:     _sessao?.trialExpira,
+      suspensaoEm:     _sessao?.suspensaoEm,
+    });
+    if (_rotaAtual) {
+      const rota = ROTAS[_rotaAtual];
+      // Re-renderiza se: rota proOnly/adminOnly mudou, ou nível de acesso mudou
+      // (cobre trial expirado → desabilita, e restauração → reabilita botões)
+      if (rota?.proOnly || rota?.adminOnly || acessoAnterior !== acessoNovo) {
+        navigate(_rotaAtual);
+      }
+    }
+  });
 }
 
 // ─── CONFIGURAR DESKTOP ────────────────────────────────────────────
@@ -370,48 +425,40 @@ function _configurarDesktop(sessao, itens) {
   const userNome  = document.getElementById("mc-user-nome");
   const userPerfil = document.getElementById("mc-user-perfil");
 
-  if (elNome)     elNome.textContent   = sessao.nomeEmpresa || "";
-  if (avatarBtn)  avatarBtn.textContent = (sessao.nome || "U")[0].toUpperCase();
+  if (elNome) elNome.textContent = sessao.nomeEmpresa || "";
+
+  const avatarCircle = document.getElementById("mc-avatar-circle");
+  const avatarNome   = document.getElementById("mc-avatar-nome");
+  const avatarRole   = document.getElementById("mc-avatar-role");
+  if (avatarCircle) avatarCircle.textContent = (sessao.nome || "U")[0].toUpperCase();
+  if (avatarNome)   avatarNome.textContent   = sessao.nome || "Usuário";
+  if (avatarRole)   avatarRole.textContent   = sessao.perfil === "admin" ? "Administrador" : "Operador";
   if (userNome)   userNome.childNodes[0].textContent = sessao.nome || "";
   if (userPerfil) userPerfil.textContent = sessao.perfil === "admin" ? "Administrador" : "Operador";
 
-  // ── Gerar itens do menu ───────────────────────────────────────
-  let htmlMenu = "";
-  let grupoAnterior = undefined;
+  // ── Gerar itens do menu agrupados ─────────────────────────────
+  const grupos = [];
+  let grupoAtual = { label: null, itens: [] };
 
   itens.forEach(item => {
-    // Separador de grupo
-    if (item.group !== null && item.group !== grupoAnterior) {
-      if (grupoAnterior !== undefined) {
-        htmlMenu += `<li class="mc-nav-separator" role="separator"></li>`;
-      }
-      if (item.group) {
-        htmlMenu += `<li class="mc-nav-label">${item.group}</li>`;
-      }
-      grupoAnterior = item.group;
+    if (item.group !== null && item.group !== grupoAtual.label) {
+      if (grupoAtual.itens.length > 0) grupos.push(grupoAtual);
+      grupoAtual = { label: item.group, itens: [] };
     }
-
-    const badgePro = item.proOnly
-      ? `<span class="mc-nav-pro-badge">PRO</span>`
-      : "";
-
-    htmlMenu += `
-      <li role="none">
-        <a class="mc-nav-item"
-           href="javascript:void(0)"
-           data-rota="${item.id}"
-           role="menuitem"
-           aria-label="${item.label}${item.proOnly ? ' (Profissional)' : ''}"
-           title="${item.label}">
-          <span class="mc-nav-icon">${item.icon}</span>
-          <span>${item.label}</span>
-          ${badgePro}
-        </a>
-      </li>
-    `;
+    grupoAtual.itens.push(item);
   });
+  if (grupoAtual.itens.length > 0) grupos.push(grupoAtual);
 
-  navMenu.innerHTML = htmlMenu;
+  navMenu.innerHTML = grupos.map(g => `
+    <div class="nav-group">
+      ${g.label ? `<p class="nav-group-label">${g.label}</p>` : ""}
+      ${g.itens.map(item => `
+        <button class="nav-item" data-rota="${item.id}" role="menuitem">
+          <span class="nav-chip">${ICONS[item.id] || ""}</span>
+          <span class="nav-label">${item.label}</span>
+          ${item.bloqueado ? '<span class="pro-badge">PRO</span>' : ""}
+        </button>`).join("")}
+    </div>`).join("");
 
   // ── Listeners de clique no menu ───────────────────────────────
   navMenu.addEventListener("click", (e) => {
@@ -440,7 +487,10 @@ function _configurarDesktop(sessao, itens) {
     userMenu?.classList.remove("aberto");
     navigate("configuracoes");
   });
-  window._irParaConfiguracoes = (aba) => navigate("configuracoes");
+  window._irParaConfiguracoes = (aba) => {
+    if (aba) window._configuracoes_aba_inicial = aba;
+    navigate("configuracoes");
+  };
 
   // ── Sino de notificações ──────────────────────────────────────
   const sinoContainer = document.getElementById("sino-container");
@@ -531,14 +581,51 @@ function _configurarMobile(sessao, itens) {
   if (sinoContainer) renderSino(sinoContainer);
 
   // ── Expor _irParaConfiguracoes ────────────────────────────────
-  window._irParaConfiguracoes = () => navigate("configuracoes");
+  window._irParaConfiguracoes = (aba) => {
+    if (aba) window._configuracoes_aba_inicial = aba;
+    navigate("configuracoes");
+  };
+}
+
+// ─── ATUALIZAR BADGES PRO NO MENU ──────────────────────────────────
+function _atualizarMenuPlano(plano) {
+  // Desktop
+  document.querySelectorAll(".nav-item[data-rota]").forEach(el => {
+    const rota = ROTAS[el.dataset.rota];
+    if (!rota?.proOnly) return;
+    const bloqueado = plano !== "profissional";
+    let badge = el.querySelector(".pro-badge");
+    if (bloqueado && !badge) {
+      badge = document.createElement("span");
+      badge.className = "pro-badge";
+      badge.textContent = "PRO";
+      el.appendChild(badge);
+    } else if (!bloqueado && badge) {
+      badge.remove();
+    }
+  });
+  // Mobile drawer
+  document.querySelectorAll(".mc-drawer-item[data-rota]").forEach(el => {
+    const rota = ROTAS[el.dataset.rota];
+    if (!rota?.proOnly) return;
+    const bloqueado = plano !== "profissional";
+    let badge = el.querySelector(".mc-drawer-pro-badge");
+    if (bloqueado && !badge) {
+      badge = document.createElement("span");
+      badge.className = "mc-drawer-pro-badge";
+      badge.textContent = "PRO";
+      el.appendChild(badge);
+    } else if (!bloqueado && badge) {
+      badge.remove();
+    }
+  });
 }
 
 // ─── ATUALIZAR ITEM ATIVO NO MENU ──────────────────────────────────
 function _atualizarMenuAtivo(routeId) {
-  // Desktop: itens .mc-nav-item
-  document.querySelectorAll(".mc-nav-item").forEach(el => {
-    el.classList.toggle("ativo", el.dataset.rota === routeId);
+  // Desktop
+  document.querySelectorAll(".nav-item[data-rota]").forEach(el => {
+    el.classList.toggle("active", el.dataset.rota === routeId);
   });
 
   // Mobile: botões do drawer

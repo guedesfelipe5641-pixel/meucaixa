@@ -8,9 +8,7 @@ import { db } from "./firebase-config.js";
 import { collection, addDoc, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { notificar } from "./notificacoes.js";
-
-// ─── VERSÃO DO APP ─────────────────────────────────────────────────
-const VERSAO_APP = "3.0";
+import { VERSAO_APP } from "./auth.js";
 
 // ─── GERAR UUID ────────────────────────────────────────────────────
 /**
@@ -234,7 +232,7 @@ export function abrirModal({ titulo, conteudo }) {
  * @param {string|Node} opcoes.conteudo      - Conteúdo HTML ou elemento DOM
  * @param {string}      [opcoes.alturaPadrao] - Altura inicial (ex: "60vh")
  */
-export function abrirBottomSheet({ titulo, conteudo, alturaPadrao = "60vh" }) {
+export function abrirBottomSheet({ titulo, conteudo, alturaPadrao = "85dvh" }) {
   _garantirCssBottomSheet();
 
   // Remove sheet anterior se existir
@@ -383,6 +381,11 @@ function _garantirCssModal() {
       padding: 20px;
       overflow-y: auto;
       flex: 1;
+    }
+    @media(max-width:767px){
+      .mc-modal-card{width:94vw}
+      .mc-modal-header{padding:14px 16px}
+      .mc-modal-corpo{padding:16px}
     }
   `;
   document.head.appendChild(s);

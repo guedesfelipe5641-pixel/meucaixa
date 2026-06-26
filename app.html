@@ -12,6 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="components.css">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -85,7 +86,7 @@
       height: 100dvh;
       opacity: 0;
       transition: opacity .35s ease;
-      background: #f8f5f2;
+      background: var(--bg, #FDF8F0);
     }
     #shell.visivel {
       opacity: 1;
@@ -106,19 +107,25 @@
   <!-- ── Shell principal (template injetado aqui) ──────────────── -->
   <div id="shell"></div>
 
+  <!-- Versão de build para cache-bust de módulos JS lazy-loaded -->
+  <script>window._MC_V = "?_=" + Date.now();</script>
+
   <!-- ── Script principal (ES Module) ─────────────────────────── -->
   <script type="module">
     // ── Imports ────────────────────────────────────────────────────
-    import { onAuthChange, calcularAcesso, logout, getSessao }
+    import { onAuthChange, calcularAcesso, logout, getSessao, atualizarDadosEmpresa, VERSAO_APP }
       from "./auth.js";
-    import { aplicarTemaGlobal }
+    import { aplicarTemaGlobal, aplicarTemaDashboard }
       from "./theme.js";
     import { limparNotificacoesExpiradas, notificar }
       from "./notificacoes.js";
+
+    // Expor notificar globalmente para debug/testes via console
+    window.notificar = notificar;
     import { verificarModoLeitura }
       from "./planGuard.js";
-    import { iniciarRouter, navigate }
-      from "./router.js";
+    // router.js importado dinamicamente com cache-bust para garantir versão nova a cada deploy
+    const { iniciarRouter, navigate } = await import("./router.js" + window._MC_V);
     import { registrarErro }
       from "./utils.js";
 
@@ -127,6 +134,21 @@
       from "./firebase-config.js";
     import { doc, getDoc, onSnapshot }
       from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    // Versão local — fonte única de verdade vinda de auth.js
+    const VERSAO_LOCAL = VERSAO_APP;
+
+    // ── Listener de atualização via Service Worker ─────────────────
+    // Quando o novo SW ativa (após deploy), ele envia SW_UPDATED para
+    // todas as abas abertas. O banner aparece automaticamente sem que
+    // o desenvolvedor precise atualizar o Firestore manualmente.
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.addEventListener("message", (e) => {
+        if (e.data?.type === "SW_UPDATED") {
+          _exibirBannerUpdate("O MeuCaixa foi atualizado. Recarregue para aplicar as novidades.");
+        }
+      });
+    }
 
     // ── PASSO 1: Splash com nomeEmpresa do cache ──────────────────
     const cacheLocal = (() => {
@@ -203,8 +225,9 @@
           `<div id="conteudo-principal" style="padding:24px"></div>`;
       }
 
-      // PASSO 5: aplicar tema global (Padrão no :root)
+      // PASSO 5: aplicar tema global (Padrão no :root) + tema do dashboard
       aplicarTemaGlobal();
+      aplicarTemaDashboard(sessao.temaVisual || "padrao", sessao.plano);
 
       // PASSO 6: limpar notificações expiradas
       limparNotificacoesExpiradas();
@@ -215,6 +238,7 @@
       // PASSO 8: calcularAcesso → banners e modoLeitura
       _configurarBanners(sessao);
       verificarModoLeitura();
+      _iniciarRefreshTrial(sessao);
 
       // PASSO 9: gerar navegação via router
       iniciarRouter(sessao);
@@ -227,9 +251,13 @@
 
       // PASSO 11: onSnapshot em sistema/comunicados/{empresaId}
       _escutarComunicados(sessao);
+      _escutarAtualizacoes();
 
       // PASSO 12: ocultar splash → revelar app
       _revelarApp();
+
+      // PASSO 12.5: verificar retorno do Stripe (?checkout=success/cancel)
+      _verificarRetornoStripe();
 
       // PASSO 13: navegar para rota inicial
       const hashRota = window.location.hash.replace("#", "");
@@ -238,7 +266,7 @@
 
       // PASSO 14: inicializar syncManager (import lazy)
       try {
-        const { syncManager } = await import("./syncManager.js");
+        const { syncManager } = await import("./syncManager.js" + window._MC_V);
         await syncManager.inicializar(sessao.empresaId, sessao.perfil, sessao.plano);
         window._syncManager = syncManager;
       } catch (e) {
@@ -273,12 +301,34 @@
       }
     }
 
-    // ── PASSO 8: Configurar banners condicionais ──────────────────
+    // ── PASSO 8: Configurar banners condicionais ─────────────────
+    // Recalcula acesso e diasTrial em tempo real (não usa sessao.acesso em cache
+    // para detectar corretamente expiração de trial em sessões abertas por dias).
     function _configurarBanners(sessao) {
-      const acesso         = sessao.acesso;
-      const status         = sessao.status;
+      const agora           = Date.now();
       const assinaturaAtiva = sessao.assinaturaAtiva;
-      const diasTrial      = sessao.diasTrialRestantes || 0;
+      const status          = sessao.status;
+      const trialExpira     = sessao.trialExpira || 0;
+
+      // Recalcular acesso ao vivo
+      let acesso;
+      if (status === "suspenso") {
+        const suspensaoEm = sessao.suspensaoEm || agora;
+        acesso = ((agora - suspensaoEm) / (1000 * 60 * 60)) <= 48 ? "ativo" : "somente_leitura";
+      } else if (assinaturaAtiva === true) {
+        acesso = "ativo";
+      } else if (status === "cancelado") {
+        acesso = "somente_leitura";
+      } else {
+        acesso = (!trialExpira || agora <= trialExpira) ? "ativo" : "somente_leitura";
+      }
+
+      const diasTrial = trialExpira
+        ? Math.max(0, Math.ceil((trialExpira - agora) / 86400000))
+        : 0;
+
+      // Limpar banners de status antes de re-renderizar (suporte a refresh periódico)
+      ["banner-trial", "banner-expirado", "banner-suspenso"].forEach(id => _ocultarBanner(id));
 
       // Banner offline (atualiza via eventos de rede — ver _configurarBadgeConexao)
       if (!navigator.onLine) _mostrarBanner("banner-offline");
@@ -296,24 +346,58 @@
 
       // Banner trial expirado
       if (acesso === "somente_leitura" && !assinaturaAtiva && status !== "suspenso" && status !== "cancelado") {
-        _ocultarBanner("banner-trial");
         _mostrarBanner("banner-expirado");
       }
 
       // Banner suspenso
       if (status === "suspenso") {
-        _ocultarBanner("banner-trial");
         _mostrarBanner("banner-suspenso");
       }
 
-      // Banner cancelado (reutiliza expirado com texto ajustado)
+      // Banner cancelado (reutiliza banner-expirado com texto ajustado)
       if (status === "cancelado") {
-        _ocultarBanner("banner-trial");
         const el = document.getElementById("banner-expirado");
-        const elSpan = el?.querySelector("span:nth-child(2)");
+        const elSpan = el?.querySelectorAll("span")[1];
         if (elSpan) elSpan.textContent = "Assinatura cancelada. Seus dados estão preservados.";
         _mostrarBanner("banner-expirado");
       }
+
+      return acesso; // para uso pelo refresh periódico
+    }
+
+    // Refresh em tempo real: onSnapshot detecta mudança de trialExpira/status no Firestore
+    // (ex: admin altera via console). Intervalo de 5min mantém contador de dias preciso.
+    function _iniciarRefreshTrial(sessao) {
+      // onSnapshot escuta o documento da empresa para todos os usuários:
+      // - Propaga mudanças de plano em tempo real (ex: upgrade/downgrade via Stripe)
+      // - Atualiza banners de trial/suspensão sem precisar recarregar a página
+      const empresaRef = doc(db, "empresas", sessao.empresaId);
+      window._unsubscribeEmpresa = onSnapshot(empresaRef, (snap) => {
+        if (!snap.exists()) return;
+        const dados = snap.data();
+
+        // Propagar plano/status/assinaturaAtiva/trialExpira para sessao e router
+        const rawTs = dados.trialExpira;
+        const trialExpiraMs = rawTs?.toMillis ? rawTs.toMillis() : (rawTs || 0);
+        atualizarDadosEmpresa({
+          plano:           dados.plano,
+          status:          dados.status,
+          assinaturaAtiva: dados.assinaturaAtiva,
+          trialExpira:     trialExpiraMs,
+        });
+
+        // Atualizar campos de trial no objeto sessao local (para banners)
+        sessao.trialExpira     = trialExpiraMs;
+        sessao.assinaturaAtiva = dados.assinaturaAtiva;
+        sessao.status          = dados.status;
+        const acessoAtual = _configurarBanners(sessao);
+        if (acessoAtual === "somente_leitura") {
+          verificarModoLeitura();
+        }
+      });
+
+      // Intervalo de 5min para atualizar contador de dias mesmo sem mudança no Firestore
+      setInterval(() => _configurarBanners(sessao), 5 * 60 * 1000);
     }
 
     // ── PASSO 10: Abertura automática de caixa ────────────────────
@@ -361,7 +445,7 @@
     function _escutarComunicados(sessao) {
       if (!sessao?.empresaId) return;
       try {
-        const refComunicado = doc(db, "sistema", "comunicados", sessao.empresaId);
+        const refComunicado = doc(db, "comunicados", sessao.empresaId);
         onSnapshot(refComunicado, (snap) => {
           if (!snap.exists()) return;
           const dados = snap.data();
@@ -374,6 +458,138 @@
       } catch {
         // EC-07: falha silenciosa offline
       }
+    }
+
+    // ── PASSO 11b: Listener de versão / update ───────────────────
+    function _escutarAtualizacoes() {
+      if (window._unsubscribeConfig) {
+        window._unsubscribeConfig();
+        window._unsubscribeConfig = null;
+      }
+
+      const configRef = doc(db, "sistema", "config");
+
+      window._unsubscribeConfig = onSnapshot(
+        configRef,
+        { includeMetadataChanges: false },
+        (snap) => {
+          if (!snap.exists()) return;
+          const {
+            versaoAppAtual, versaoAppMinima, mensagemUpdate, updateCritico,
+            manutencaoAtiva, manutencaoTexto, modoLeituraGlobal,
+          } = snap.data();
+
+          // ── Manutenção mid-session ─────────────────────────────
+          // Admin FSG pode ativar/desativar manutenção sem que usuários
+          // precisem recarregar — onSnapshot propaga em tempo real.
+          if (manutencaoAtiva) {
+            const elTexto = document.getElementById("banner-manutencao-texto");
+            if (elTexto && manutencaoTexto) elTexto.textContent = manutencaoTexto;
+            _mostrarBanner("banner-manutencao");
+            if (modoLeituraGlobal) {
+              window._modoLeituraGlobal = true;
+              verificarModoLeitura();
+            }
+          } else {
+            _ocultarBanner("banner-manutencao");
+            if (window._modoLeituraGlobal) {
+              window._modoLeituraGlobal = false;
+            }
+          }
+
+          // ── Verificação de versão ─────────────────────────────
+          if (!versaoAppAtual) return;
+
+          const versaoNova         = _versaoMaiorQue(versaoAppAtual, VERSAO_LOCAL);
+          const versaoAbaixoMinima = versaoAppMinima
+            ? _versaoMaiorQue(versaoAppMinima, VERSAO_LOCAL)
+            : false;
+
+          if (versaoAbaixoMinima || updateCritico) {
+            _removerBannerUpdate();
+            notificar(
+              "bloqueio",
+              "Atualização obrigatória",
+              mensagemUpdate || "Uma atualização crítica está disponível. Recarregue para continuar.",
+              {
+                autoClose:  false,
+                labelBotao: "Atualizar agora",
+                onConfirm:  () => window.location.reload(),
+              }
+            );
+            return;
+          }
+
+          if (versaoNova) {
+            _exibirBannerUpdate(mensagemUpdate || "Uma nova versão do MeuCaixa está disponível.");
+          }
+        },
+        (error) => {
+          console.error("[update-check] onSnapshot sistema/config falhou:", error.code);
+        }
+      );
+    }
+
+    function _exibirBannerUpdate(mensagem) {
+      _removerBannerUpdate();
+
+      const banner = document.createElement("div");
+      banner.id = "mc-update-banner";
+      banner.className = "mc-update-banner";
+      banner.innerHTML = `
+        <span class="mc-update-banner__texto">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <polyline points="1 4 1 10 7 10"></polyline>
+            <path d="M3.51 15a9 9 0 1 0 .49-3.51"></path>
+          </svg>
+          ${mensagem}
+        </span>
+        <div class="mc-update-banner__acoes">
+          <button class="mc-update-banner__btn mc-update-banner__btn--primario"
+                  id="mc-update-agora">Atualizar agora</button>
+          <button class="mc-update-banner__btn mc-update-banner__btn--secundario"
+                  id="mc-update-depois">Depois</button>
+        </div>
+      `;
+
+      document.body.insertBefore(banner, document.body.firstChild);
+      document.body.classList.add("mc-tem-banner-update");
+
+      // Medir altura real do banner (varia em mobile por flex-direction:column)
+      const _atualizarAlturaBanner = () => {
+        document.body.style.setProperty("--mc-banner-h", banner.offsetHeight + "px");
+      };
+      _atualizarAlturaBanner();
+      banner._ro = new ResizeObserver(_atualizarAlturaBanner);
+      banner._ro.observe(banner);
+
+      document.getElementById("mc-update-agora").addEventListener("click", () => {
+        window.location.reload();
+      });
+      document.getElementById("mc-update-depois").addEventListener("click", () => {
+        _removerBannerUpdate();
+      });
+    }
+
+    function _removerBannerUpdate() {
+      const b = document.getElementById("mc-update-banner");
+      b?._ro?.disconnect();
+      b?.remove();
+      document.body.classList.remove("mc-tem-banner-update");
+      document.body.style.removeProperty("--mc-banner-h");
+    }
+
+    function _versaoMaiorQue(versaoA, versaoB) {
+      const parse = (v) => {
+        const m = String(v).match(/^(\d+)\.(\d+)\.(\d+)/);
+        return m ? [+m[1], +m[2], +m[3]] : [0, 0, 0];
+      };
+      const [ma, mia, pa] = parse(versaoA);
+      const [mb, mib, pb] = parse(versaoB);
+      if (ma !== mb)   return ma  > mb;
+      if (mia !== mib) return mia > mib;
+      return pa > pb;
     }
 
     // ── PASSO 12: Revelar app (ocultar splash) ────────────────────
@@ -423,6 +639,25 @@
       window.addEventListener("online",  atualizar);
       window.addEventListener("offline", atualizar);
       atualizar(); // estado inicial
+    }
+
+    // ── STRIPE: verificar retorno de checkout ────────────────────
+    function _verificarRetornoStripe() {
+      const params   = new URLSearchParams(window.location.search);
+      const checkout = params.get("checkout");
+      if (!checkout) return;
+
+      params.delete("checkout");
+      const novaUrl = window.location.pathname +
+        (params.toString() ? "?" + params.toString() : "") +
+        window.location.hash;
+      history.replaceState(null, "", novaUrl);
+
+      if (checkout === "success") {
+        notificar("sucesso", "Pagamento confirmado!", "Sua assinatura está sendo ativada. Em instantes seu plano será atualizado.");
+      } else if (checkout === "cancel") {
+        notificar("aviso", "Pagamento cancelado", "Você pode tentar novamente quando quiser.");
+      }
     }
 
     // ── Helpers de banner ────────────────────────────────────────

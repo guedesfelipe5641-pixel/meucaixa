@@ -16,6 +16,7 @@ import {
 import {
   doc,
   getDoc,
+  getDocFromServer,
   getDocs,
   setDoc,
   updateDoc,
@@ -29,7 +30,7 @@ import {
 import { auth, db } from "./firebase-config.js";
 
 // ─── VERSÃO DO APP ─────────────────────────────────────────────────
-export const VERSAO_APP = "3.0";
+export const VERSAO_APP = "3.0.0";
 
 // ─── SESSÃO LOCAL ──────────────────────────────────────────────────
 let _sessao = null;
@@ -81,6 +82,8 @@ export function calcularAcesso(empresa) {
     const trialExpira = empresa.trialExpira?.toMillis
       ? empresa.trialExpira.toMillis()
       : empresa.trialExpira || 0;
+    // trialExpira === 0 significa que ainda não foi inicializado (conta nova antes do 1º onAuthChange)
+    if (!trialExpira) return "ativo";
     return agora <= trialExpira ? "ativo" : "somente_leitura";
   }
 
@@ -143,12 +146,22 @@ function montarSessao(uid, usuario, empresa) {
     diasTrialRestantes:   diasTrial,
     acesso:               calcularAcesso(empresa),
 
+    // Estado de suspensão (necessário para recalcular carência 48h sem ir ao Firestore)
+    suspensaoEm: empresa.suspensaoEm?.toMillis
+      ? empresa.suspensaoEm.toMillis()
+      : empresa.suspensaoEm || null,
+
     // Configurações operacionais
     temaVisual:           empresa.temaVisual || "padrao",
     layoutForcado:        empresa.layoutForcado || "auto",
-    permiteVendaOffline:  empresa.permiteVendaOffline !== false,
+    // Operadores têm configurações individuais; Admin usa configuração da empresa
+    permiteVendaOffline:  usuario.perfil === "operador"
+      ? (usuario.permiteVendaOffline !== false)
+      : (empresa.permiteVendaOffline !== false),
     limiteVendasOffline:  empresa.limiteVendasOffline || (empresa.plano === "profissional" ? 30 : 8),
-    descontoPermitido:    empresa.descontoPermitido || "ambos",
+    descontoPermitido:    usuario.perfil === "operador"
+      ? (usuario.descontoPermitido || empresa.descontoPermitido || "ambos")
+      : (empresa.descontoPermitido || "ambos"),
   };
 }
 
@@ -360,8 +373,36 @@ export async function verificarEmailConfirmado(email, senha) {
   }
 }
 
+// ─── ATUALIZAR DADOS DA EMPRESA NA SESSÃO ──────────────────────────
+// Chamada pelo onSnapshot de empresas/{uid} no app.html.
+// Atualiza plano/status/assinaturaAtiva em memória e localStorage,
+// e dispara mc:sessao-atualizada para o router reagir em tempo real.
+export function atualizarDadosEmpresa({ plano, status, assinaturaAtiva, trialExpira }) {
+  const atual = getSessao();
+  if (!atual) return;
+  const novoTrialExpira = trialExpira !== undefined ? trialExpira : atual.trialExpira;
+  const mudou = plano !== atual.plano ||
+                status !== atual.status ||
+                assinaturaAtiva !== atual.assinaturaAtiva ||
+                (trialExpira !== undefined && trialExpira !== atual.trialExpira);
+  if (!mudou) return;
+  // Recalcular acesso com os novos valores — módulos usam sessao.acesso diretamente
+  const novoAcesso = calcularAcesso({
+    status,
+    assinaturaAtiva,
+    trialExpira:  novoTrialExpira,
+    suspensaoEm:  atual.suspensaoEm,
+  });
+  const nova = { ...atual, plano, status, assinaturaAtiva, trialExpira: novoTrialExpira, acesso: novoAcesso };
+  salvarSessao(nova);
+  window.dispatchEvent(new CustomEvent("mc:sessao-atualizada", { detail: nova }));
+}
+
 // ─── LOGOUT ────────────────────────────────────────────────────────
 export async function logout() {
+  window._unsubscribeConfig?.();
+  window._unsubscribeEmpresa?.();
+  window._syncManager?.pararSync?.();
   limparSessao();
   await signOut(auth);
   window.location.href = "login.html";
@@ -382,6 +423,38 @@ export async function recuperarSenha(email) {
   }
 }
 
+// ─── VERIFICAÇÃO DE SESSÃO EM BACKGROUND ────────────────────────────
+// Chamada após o fast-path do cache em onAuthChange.
+// Verifica status/assinaturaAtiva (campos voláteis mid-session, ex: suspensão
+// via Stripe). Plano NÃO é checado aqui — é atualizado pelo ciclo de sync
+// via getDocFromServer, evitando poluição do cache com valores temporários de teste.
+async function _verificarSessaoEmBackground(user, cacheAtual) {
+  try {
+    // getDocFromServer garante leitura direto do servidor, não do IndexedDB local.
+    // Crítico para detectar mudanças recentes (ex: webhook Stripe atualizou
+    // assinaturaAtiva segundos antes e o cache local ainda não sincronizou).
+    const userSnap = await getDocFromServer(doc(db, "usuarios", user.uid));
+    if (!userSnap.exists()) return;
+    const empSnap = await getDocFromServer(doc(db, "empresas", userSnap.data().empresaId));
+    if (!empSnap.exists()) return;
+    const empresa = empSnap.data();
+
+    const planoMudou  = empresa.plano           !== cacheAtual.plano;
+    const statusMudou = empresa.status          !== cacheAtual.status;
+    const ativoMudou  = empresa.assinaturaAtiva !== cacheAtual.assinaturaAtiva;
+
+    if (planoMudou || statusMudou || ativoMudou) {
+      const sessaoAtualizada = { ...cacheAtual,
+        plano:           empresa.plano,
+        status:          empresa.status,
+        assinaturaAtiva: empresa.assinaturaAtiva,
+      };
+      salvarSessao(sessaoAtualizada);
+      window.dispatchEvent(new CustomEvent("mc:sessao-atualizada", { detail: sessaoAtualizada }));
+    }
+  } catch { /* silencioso — background, não bloqueia o app */ }
+}
+
 // ─── OBSERVADOR DE AUTENTICAÇÃO ─────────────────────────────────────
 // Usado pelo app.html para proteger rotas.
 // callback(sessao) autenticado · callback(null) não autenticado
@@ -395,14 +468,15 @@ export function onAuthChange(callback) {
     // Cache válido: verifica TTL antes de usar sem ir ao Firestore
     const cache = getSessao();
     if (cache && cache.uid === user.uid) {
-      // Se trial expirou, invalidar cache e forçar leitura do Firestore
-      if (cache.trialExpira && cache.trialExpira < Date.now()) {
+      // Se trial expirou ou ainda não foi inicializado, invalidar cache e forçar leitura do Firestore
+      if (!cache.trialExpira || cache.trialExpira < Date.now()) {
         localStorage.removeItem("mc_sessao");
         _sessao = null;
         // fall through para leitura do Firestore abaixo
       } else {
         if (navigator.storage?.persist) navigator.storage.persist();
         callback(cache);
+        _verificarSessaoEmBackground(user, cache);
         return;
       }
     }

@@ -1,314 +1,10 @@
 <!-- ╔══════════════════════════════════════════════════════════════════╗
-     ║  MeuCaixa · templates/desktop.html · v3.0                       ║
-     ║  Shell desktop — layout estático (injetado no #shell)           ║
-     ║  Requer: theme.js (--primary / --accent no :root)               ║
+     ║  MeuCaixa · templates/desktop.html · v4.0                       ║
+     ║  Shell desktop — layout flex (injetado no #shell)               ║
+     ║  Estilos em components.css                                       ║
      ╚══════════════════════════════════════════════════════════════════╝ -->
 
-<style>
-  /* ── Reset escopo do shell ─────────────────────────────────────── */
-  #mc-desktop *, #mc-desktop *::before, #mc-desktop *::after {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-  }
-
-  /* ── Fontes ────────────────────────────────────────────────────── */
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap');
-
-  /* ── Banners fixos (ocultos por padrão) ───────────────────────── */
-  .mc-banner {
-    display: none;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 20px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 13px;
-    font-weight: 500;
-    position: relative;
-    z-index: 200;
-  }
-  .mc-banner.visivel { display: flex; }
-  .mc-banner a {
-    margin-left: auto;
-    font-weight: 700;
-    text-decoration: none;
-    border-radius: 6px;
-    padding: 4px 14px;
-    white-space: nowrap;
-    transition: opacity .15s;
-  }
-  .mc-banner a:hover { opacity: .82; }
-
-  #banner-offline    { background: #37474F; color: #fff; }
-  #banner-offline a  { background: #fff; color: #37474F; }
-
-  #banner-trial      { background: #1565C0; color: #fff; }
-  #banner-trial a    { background: #fff; color: #1565C0; }
-
-  #banner-expirado   { background: #F57F17; color: #fff; }
-  #banner-expirado a { background: #fff; color: #F57F17; }
-
-  #banner-suspenso   { background: #C62828; color: #fff; }
-
-  #banner-manutencao { background: #4A148C; color: #fff; }
-
-  /* ── Layout principal: CSS Grid ────────────────────────────────── */
-  #mc-desktop {
-    display: grid;
-    grid-template-areas:
-      "header  header"
-      "sidebar main"
-      "footer  footer";
-    grid-template-rows: 62px 1fr 36px;
-    grid-template-columns: 220px 1fr;
-    height: 100vh;
-    font-family: 'DM Sans', sans-serif;
-    background: #f8f5f2;
-    overflow: hidden;
-  }
-
-  /* ── Header 62px ───────────────────────────────────────────────── */
-  #mc-header {
-    grid-area: header;
-    background: var(--primary, #6B3520);
-    color: #fff;
-    display: flex;
-    align-items: center;
-    padding: 0 18px;
-    gap: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,.20);
-    z-index: 100;
-  }
-  #mc-logo {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
-  }
-  #mc-logo img {
-    width: 32px;
-    height: 32px;
-    border-radius: 6px;
-    object-fit: cover;
-  }
-  #mc-logo-texto {
-    font-family: 'DM Serif Display', serif;
-    font-size: 18px;
-    color: #fff;
-    letter-spacing: .3px;
-    line-height: 1;
-  }
-  #mc-nome-empresa {
-    font-size: 13px;
-    font-weight: 600;
-    color: rgba(255,255,255,.80);
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  /* Badge de conexão */
-  #mc-badge-conexao {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 12px;
-    font-weight: 600;
-    padding: 3px 10px;
-    border-radius: 20px;
-    transition: background .3s, color .3s;
-    flex-shrink: 0;
-  }
-  #mc-badge-conexao.online  { background: rgba(255,255,255,.18); color: #fff; }
-  #mc-badge-conexao.offline { background: #C62828; color: #fff; }
-  #mc-badge-conexao::before {
-    content: "";
-    display: inline-block;
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: currentColor;
-    opacity: .8;
-  }
-
-  /* Sino */
-  #sino-container {
-    position: relative;
-    flex-shrink: 0;
-  }
-
-  /* Avatar + menu do usuário */
-  #mc-avatar-wrap {
-    position: relative;
-    flex-shrink: 0;
-  }
-  #mc-avatar-btn {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: rgba(255,255,255,.22);
-    border: 2px solid rgba(255,255,255,.4);
-    color: #fff;
-    font-size: 15px;
-    font-weight: 700;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background .15s;
-    font-family: 'DM Sans', sans-serif;
-  }
-  #mc-avatar-btn:hover { background: rgba(255,255,255,.32); }
-
-  #mc-user-menu {
-    display: none;
-    position: absolute;
-    top: calc(100% + 8px);
-    right: 0;
-    background: #fff;
-    border-radius: 10px;
-    box-shadow: 0 8px 24px rgba(0,0,0,.18);
-    min-width: 180px;
-    z-index: 9999;
-    overflow: hidden;
-  }
-  #mc-user-menu.aberto { display: block; }
-  #mc-user-nome {
-    padding: 14px 16px 10px;
-    font-size: 13px;
-    font-weight: 700;
-    color: #1a1a1a;
-    border-bottom: 1px solid #f0f0f0;
-  }
-  #mc-user-perfil {
-    font-size: 11px;
-    font-weight: 400;
-    color: #888;
-    display: block;
-    margin-top: 2px;
-  }
-  .mc-user-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 16px;
-    font-size: 13px;
-    color: #333;
-    cursor: pointer;
-    transition: background .1s;
-    border: none;
-    background: none;
-    width: 100%;
-    text-align: left;
-    font-family: 'DM Sans', sans-serif;
-  }
-  .mc-user-item:hover { background: #f8f5f2; }
-  .mc-user-item.logout { color: #C62828; }
-
-  /* ── Sidebar 220px ─────────────────────────────────────────────── */
-  #mc-sidebar {
-    grid-area: sidebar;
-    background: #fff;
-    border-right: 1px solid #e8e0d8;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-  }
-  #nav-menu {
-    flex: 1;
-    padding: 12px 0;
-    list-style: none;
-  }
-  /* Separadores de grupo */
-  .mc-nav-separator {
-    height: 1px;
-    background: #f0ebe4;
-    margin: 6px 12px;
-  }
-  .mc-nav-label {
-    font-size: 10px;
-    font-weight: 700;
-    color: #bbb;
-    text-transform: uppercase;
-    letter-spacing: .8px;
-    padding: 8px 16px 4px;
-  }
-  /* Itens de menu */
-  .mc-nav-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 9px 16px;
-    font-size: 13px;
-    font-weight: 500;
-    color: #555;
-    cursor: pointer;
-    border-left: 3px solid transparent;
-    transition: background .12s, color .12s, border-color .12s;
-    text-decoration: none;
-    position: relative;
-    user-select: none;
-  }
-  .mc-nav-item:hover {
-    background: #f8f5f2;
-    color: var(--primary, #6B3520);
-  }
-  .mc-nav-item.ativo {
-    background: #f5ede6;
-    color: var(--primary, #6B3520);
-    border-left-color: var(--primary, #6B3520);
-    font-weight: 700;
-  }
-  .mc-nav-icon {
-    font-size: 16px;
-    width: 20px;
-    text-align: center;
-    flex-shrink: 0;
-  }
-  .mc-nav-pro-badge {
-    margin-left: auto;
-    font-size: 9px;
-    font-weight: 700;
-    background: var(--accent, #F0A335);
-    color: #fff;
-    border-radius: 4px;
-    padding: 1px 5px;
-    letter-spacing: .4px;
-  }
-
-  /* ── Área de conteúdo principal ─────────────────────────────────── */
-  #conteudo-principal {
-    grid-area: main;
-    overflow-y: auto;
-    padding: 24px;
-    background: #f8f5f2;
-    position: relative;
-  }
-
-  /* ── Footer 36px ───────────────────────────────────────────────── */
-  #mc-footer {
-    grid-area: footer;
-    background: #fff;
-    border-top: 1px solid #e8e0d8;
-    display: flex;
-    align-items: center;
-    padding: 0 18px;
-    gap: 16px;
-    font-size: 11px;
-    color: #aaa;
-  }
-  #mc-footer-version { margin-right: auto; }
-  #mc-footer-status {
-    font-weight: 600;
-    transition: color .3s;
-  }
-  #mc-footer-status.online  { color: #2E7D32; }
-  #mc-footer-status.offline { color: #C62828; }
-</style>
-
-<!-- ── Banners condicionais (ocultos; exibidos por app.html) ─────── -->
+<!-- ── Banners condicionais (ocultos; exibidos por app.html) ──────── -->
 <div id="banner-offline" class="mc-banner">
   <span>📵</span>
   <span id="banner-offline-texto">Você está offline. Algumas funções podem estar indisponíveis.</span>
@@ -333,27 +29,42 @@
   <span id="banner-manutencao-texto">Sistema em manutenção. Retorne em breve.</span>
 </div>
 
-<!-- ── Shell desktop ────────────────────────────────────────────── -->
-<div id="mc-desktop">
+<!-- ── Shell desktop ─────────────────────────────────────────────── -->
+<div class="layout">
 
-  <!-- Header -->
-  <header id="mc-header">
-    <div id="mc-logo">
-      <img src="icons/icon-192.png" alt="MeuCaixa" onerror="this.style.display='none'" />
-      <span id="mc-logo-texto">MeuCaixa</span>
-    </div>
+  <!-- Header 62px -->
+  <header class="header">
 
+    <!-- Logo -->
+    <svg width="32" height="32" viewBox="0 0 72 72" style="flex-shrink:0">
+      <rect width="72" height="72" rx="16" fill="rgba(212,163,115,.18)"/>
+      <rect x="16" y="28" width="40" height="24" rx="5" stroke="#D4A373" stroke-width="2.5" fill="none"/>
+      <rect x="25" y="20" width="22" height="10" rx="4" stroke="#D4A373" stroke-width="2" fill="none"/>
+      <circle cx="36" cy="40" r="5" fill="#D4A373"/>
+    </svg>
+
+    <span id="mc-logo-texto">Meu Caixa</span>
+    <span id="mc-logo-sub">by FSG Soluções</span>
+
+    <!-- Nome da empresa (preenchido pelo router) -->
     <span id="mc-nome-empresa"></span>
 
     <!-- Badge de conexão -->
     <div id="mc-badge-conexao" class="online">Online</div>
 
-    <!-- Sino de notificações -->
+    <!-- Sino de notificações (preenchido por notificacoes.js) -->
     <div id="sino-container"></div>
 
     <!-- Avatar + menu do usuário -->
     <div id="mc-avatar-wrap">
-      <button id="mc-avatar-btn" aria-label="Menu do usuário" aria-expanded="false">U</button>
+      <button id="mc-avatar-btn" aria-label="Menu do usuário" aria-expanded="false">
+        <span id="mc-avatar-circle" class="mc-avatar-circle">U</span>
+        <div>
+          <p id="mc-avatar-nome" class="mc-avatar-nome">Usuário</p>
+          <p id="mc-avatar-role" class="mc-avatar-role">Perfil</p>
+        </div>
+      </button>
+
       <div id="mc-user-menu" role="menu">
         <div id="mc-user-nome">
           Usuário
@@ -363,25 +74,31 @@
                 onclick="window._irParaConfiguracoes?.()">
           ⚙️ Configurações
         </button>
-        <button class="mc-user-item logout" id="mc-btn-logout"
-                data-acao="logout">
+        <button class="mc-user-item logout" id="mc-btn-logout" data-acao="logout">
           ↩️ Sair
         </button>
       </div>
     </div>
+
   </header>
 
-  <!-- Sidebar + conteúdo -->
-  <aside id="mc-sidebar">
-    <ul id="nav-menu" role="navigation" aria-label="Menu principal">
-      <!-- Gerado por router.getMenuItems() via iniciarRouter() -->
-    </ul>
-  </aside>
+  <!-- Corpo: sidebar + conteúdo -->
+  <div class="body">
 
-  <!-- Área principal (módulos injetados pelo router) -->
-  <main id="conteudo-principal" role="main" aria-live="polite">
-    <!-- Conteúdo dos módulos é renderizado aqui pelo router.navigate() -->
-  </main>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <!-- Preenchido por router.js → iniciarRouter() → _configurarDesktop() -->
+      <nav id="nav-menu" role="menu" aria-label="Menu principal"></nav>
+      <div style="flex:1"></div>
+      <div class="sidebar-foot">
+        <p>FSG Soluções<br>Tecnológicas &amp; Serviços</p>
+      </div>
+    </aside>
+
+    <!-- Área principal (módulos injetados pelo router) -->
+    <main id="conteudo-principal" class="main" role="main" aria-live="polite"></main>
+
+  </div>
 
   <!-- Footer -->
   <footer id="mc-footer">

@@ -1,0 +1,240 @@
+/* =============================================================
+   Meu Caixa Digital — Estilos Globais
+   FSG Soluções Tecnológicas & Serviços
+   ============================================================= */
+
+/* Reset */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;font-family:'DM Sans',sans-serif;overflow:hidden;background:#f8f5f2}
+
+/* Variáveis de tema */
+:root{
+  --primary:#6B3520;--accent:#F0A335;--bg:#FDF8F0;--text:#3B2C1E;
+  --surface:#fff;--danger:#D94F3A;--success:#6B8E4E;
+  --sidebar-w:236px;--header-h:62px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(0,0,0,.14);border-radius:4px}
+
+/* ── Layout ──────────────────────────────────────────────────── */
+.layout{display:flex;flex-direction:column;height:100vh;background:var(--bg)}
+.header{height:var(--header-h);flex-shrink:0;background:var(--primary);display:flex;align-items:center;padding:0 24px;gap:16px;z-index:20;box-shadow:0 2px 12px rgba(0,0,0,.18)}
+.body{flex:1;display:flex;overflow:hidden}
+.main{flex:1;overflow-y:auto;padding:28px 32px;background:var(--bg)}
+.sidebar{width:var(--sidebar-w);flex-shrink:0;background:var(--surface);border-right:1px solid rgba(0,0,0,.07);display:flex;flex-direction:column;overflow-y:auto;padding:10px 12px}
+
+/* ── Navegação ───────────────────────────────────────────────── */
+.nav-group{margin-bottom:4px}
+.nav-group-label{font-size:10px;font-weight:700;color:#bbb;text-transform:uppercase;letter-spacing:.09em;padding:14px 14px 6px}
+.nav-item{display:flex;flex-direction:row;align-items:center;gap:11px;padding:8px 10px;border-radius:12px;cursor:pointer;border:none;background:none;width:100%;text-align:left;font-family:inherit;position:relative;margin-bottom:2px;transition:background .16s,transform .12s}
+.nav-chip{width:30px;height:30px;border-radius:9px;background:rgba(0,0,0,.05);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .16s}
+.nav-chip svg{width:16px;height:16px;color:#9a8f86;transition:color .16s}
+.nav-label{font-size:13.5px;font-weight:600;color:var(--text);transition:color .16s}
+.nav-item:hover{background:rgba(0,0,0,.04)}
+.nav-item:hover .nav-chip{background:rgba(0,0,0,.08)}
+.nav-item:active{transform:scale(.98)}
+.nav-item.active{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.nav-item.active .nav-chip{background:var(--accent);box-shadow:0 2px 8px color-mix(in srgb,var(--accent) 45%,transparent)}
+.nav-item.active .nav-chip svg{color:#fff}
+.nav-item.active .nav-label{color:var(--primary);font-weight:700}
+.pro-badge{margin-left:auto;background:var(--accent);color:#fff;font-size:9px;font-weight:800;letter-spacing:.04em;padding:2px 6px;border-radius:5px;line-height:1.1}
+.sidebar-foot{border-top:1px solid rgba(0,0,0,.06);padding-top:12px;margin-top:8px;text-align:center}
+.sidebar-foot p{font-size:9px;color:#ddd;letter-spacing:.04em;line-height:1.7}
+
+/* ── Header — logo e elementos ───────────────────────────────── */
+#mc-logo-texto{font-family:'DM Serif Display',serif;font-size:22px;color:#fff;font-weight:400;letter-spacing:-.02em}
+#mc-logo-sub{color:rgba(255,255,255,.4);font-size:11px;margin-left:10px;letter-spacing:.04em;text-transform:uppercase}
+#mc-nome-empresa{font-size:13px;font-weight:600;color:rgba(255,255,255,.7);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Badge de conexão */
+#mc-badge-conexao{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px;transition:background .3s,color .3s;flex-shrink:0}
+#mc-badge-conexao.online{background:rgba(255,255,255,.18);color:#fff}
+#mc-badge-conexao.offline{background:#C62828;color:#fff}
+#mc-badge-conexao::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.8}
+
+/* Sino */
+#sino-container{position:relative;flex-shrink:0}
+
+/* Avatar + menu do usuário */
+#mc-avatar-wrap{position:relative;flex-shrink:0}
+#mc-avatar-btn{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.1);border:none;border-radius:12px;padding:6px 14px;cursor:pointer;color:rgba(255,255,255,.8);font-family:inherit}
+#mc-avatar-btn:hover{background:rgba(255,255,255,.18)}
+.mc-avatar-circle{width:28px;height:28px;border-radius:50%;background:rgba(212,163,115,.3);display:flex;align-items:center;justify-content:center;color:#D4A373;font-weight:700;font-size:13px;flex-shrink:0}
+.mc-avatar-nome{color:#fff;font-size:13px;font-weight:600;line-height:1.2}
+.mc-avatar-role{color:rgba(255,255,255,.45);font-size:10px}
+#mc-user-menu{display:none;position:absolute;top:calc(100% + 8px);right:0;background:#fff;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);min-width:180px;z-index:9999;overflow:hidden}
+#mc-user-menu.aberto{display:block}
+#mc-user-nome{padding:14px 16px 10px;font-size:13px;font-weight:700;color:#1a1a1a;border-bottom:1px solid #f0f0f0}
+#mc-user-perfil{font-size:11px;font-weight:400;color:#888;display:block;margin-top:2px}
+.mc-user-item{display:flex;align-items:center;gap:10px;padding:10px 16px;font-size:13px;color:#333;cursor:pointer;transition:background .1s;border:none;background:none;width:100%;text-align:left;font-family:inherit}
+.mc-user-item:hover{background:#f8f5f2}
+.mc-user-item.logout{color:#C62828}
+
+/* ── Banners condicionais ─────────────────────────────────────── */
+.mc-banner{display:none;align-items:center;gap:10px;padding:10px 20px;font-size:13px;font-weight:500;position:relative;z-index:200}
+.mc-banner.visivel{display:flex}
+.mc-banner a{margin-left:auto;font-weight:700;text-decoration:none;border-radius:6px;padding:4px 14px;white-space:nowrap;transition:opacity .15s}
+.mc-banner a:hover{opacity:.82}
+#banner-offline{background:#37474F;color:#fff}
+#banner-offline a{background:#fff;color:#37474F}
+#banner-trial{background:#1565C0;color:#fff}
+#banner-trial a{background:#fff;color:#1565C0}
+#banner-expirado{background:#F57F17;color:#fff}
+#banner-expirado a{background:#fff;color:#F57F17}
+#banner-suspenso{background:#C62828;color:#fff}
+#banner-manutencao{background:#4A148C;color:#fff}
+
+/* ── Footer ──────────────────────────────────────────────────── */
+#mc-footer{background:var(--surface);border-top:1px solid rgba(0,0,0,.07);display:flex;align-items:center;padding:0 24px;height:36px;gap:16px;font-size:11px;color:#aaa;flex-shrink:0}
+#mc-footer-version{margin-right:auto}
+#mc-footer-status{font-weight:600;transition:color .3s}
+#mc-footer-status.online{color:#2E7D32}
+#mc-footer-status.offline{color:#C62828}
+
+/* ── Cards ───────────────────────────────────────────────────── */
+.card{background:var(--surface);border-radius:16px;box-shadow:0 1px 6px rgba(0,0,0,.06)}
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.stat-card{background:var(--surface);border-radius:16px;padding:20px;box-shadow:0 1px 6px rgba(0,0,0,.06)}
+
+/* ── Tabela ──────────────────────────────────────────────────── */
+.table{width:100%;border-collapse:collapse}
+.table-responsive{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.table th{text-align:left;font-size:11px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.05em;padding:10px 14px;border-bottom:2px solid rgba(0,0,0,.06)}
+.table td{padding:13px 14px;border-bottom:1px solid rgba(0,0,0,.05);font-size:13.5px;color:var(--text)}
+.table tr:last-child td{border-bottom:none}
+.table tr:hover td{background:rgba(0,0,0,.018)}
+
+/* ── Formulários ─────────────────────────────────────────────── */
+.input{width:100%;padding:10px 14px;border:1.5px solid rgba(0,0,0,.1);border-radius:10px;font-size:14px;font-family:inherit;color:var(--text);background:var(--surface);outline:none;transition:border-color .18s}
+.input:focus{border-color:var(--accent)}
+.input::placeholder{color:#bbb}
+.select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;cursor:pointer}
+label.lbl{font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px}
+.form-grid{display:grid;gap:14px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-group{display:flex;flex-direction:column}
+
+/* ── Botões ──────────────────────────────────────────────────── */
+.btn{padding:9px 18px;border-radius:10px;font-size:13.5px;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:opacity .15s,transform .1s;display:inline-flex;align-items:center;gap:6px}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-secondary{background:rgba(0,0,0,.06);color:var(--text)}
+.btn-danger{background:color-mix(in srgb,var(--danger) 12%,transparent);color:var(--danger)}
+.btn-success{background:color-mix(in srgb,var(--success) 12%,transparent);color:var(--success)}
+.btn-sm{padding:6px 12px;font-size:12px;border-radius:8px}
+
+/* ── Tags ────────────────────────────────────────────────────── */
+.tag{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600}
+.tag-success{background:color-mix(in srgb,var(--success) 12%,transparent);color:var(--success)}
+.tag-danger{background:color-mix(in srgb,var(--danger) 12%,transparent);color:var(--danger)}
+.tag-neutral{background:rgba(0,0,0,.07);color:#888}
+.tag-accent{background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent)}
+
+/* ── Modal (criado por utils.js com .mc-modal-overlay / .mc-modal-card) ── */
+.modal-overlay,.mc-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal,.mc-modal-card{background:var(--surface);border-radius:20px;padding:28px;width:460px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,.25);max-height:90vh;overflow-y:auto}
+.modal h3,.mc-modal-card h3{font-size:18px;font-weight:700;color:var(--text);margin-bottom:20px;letter-spacing:-.02em}
+
+/* ── Cabeçalho de seção ──────────────────────────────────────── */
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.section-header h2{font-size:20px;font-weight:700;color:var(--text);letter-spacing:-.02em}
+
+/* ── Abas em pílula ──────────────────────────────────────────── */
+.pill-tabs{display:flex;gap:6px;padding:4px;background:rgba(0,0,0,.06);border-radius:12px;width:fit-content}
+.pill-tab{padding:7px 18px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:all .15s;color:#888;background:none}
+.pill-tab.active{background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.1)}
+
+/* ── Banner de Atualização ───────────────────────────────────── */
+.mc-update-banner{position:fixed;top:0;left:0;right:0;z-index:9999;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px;background:var(--primary,#1a56db);color:#fff;font-size:.875rem;font-family:inherit;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.mc-update-banner__texto{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+.mc-update-banner__acoes{display:flex;gap:8px;flex-shrink:0}
+.mc-update-banner__btn{padding:6px 14px;border-radius:6px;font-size:.8125rem;font-weight:600;cursor:pointer;border:none;transition:opacity .15s;font-family:inherit}
+.mc-update-banner__btn:hover{opacity:.85}
+.mc-update-banner__btn--primario{background:#fff;color:var(--primary,#1a56db)}
+.mc-update-banner__btn--secundario{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.5)}
+/* Ajuste do shell quando banner está visível — altura medida via JS em --mc-banner-h */
+body.mc-tem-banner-update #shell{margin-top:var(--mc-banner-h,48px);height:calc(100dvh - var(--mc-banner-h,48px))}
+@media(max-width:480px){
+  .mc-update-banner{flex-direction:column;align-items:flex-start;gap:10px}
+  .mc-update-banner__acoes{width:100%}
+  .mc-update-banner__btn{flex:1;text-align:center}
+}
+
+/* ── Gráfico de barras ───────────────────────────────────────── */
+.bar-chart{display:flex;gap:10px;align-items:flex-end;height:140px;padding:0 4px}
+.bar-group{flex:1;display:flex;gap:3px;align-items:flex-end;justify-content:center}
+.bar{border-radius:5px 5px 0 0;min-height:4px;transition:height .6s cubic-bezier(.4,0,.2,1)}
+.chart-labels{display:flex;gap:10px;margin-top:8px}
+.chart-label{flex:1;text-align:center;font-size:11px;color:#aaa;font-weight:500}
+
+/* ── Barra de progresso ──────────────────────────────────────── */
+.progress-bg{height:6px;background:rgba(0,0,0,.07);border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;border-radius:3px;transition:width .8s cubic-bezier(.4,0,.2,1)}
+
+/* ── Status do caixa ─────────────────────────────────────────── */
+.caixa-open-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600}
+.pulse{width:8px;height:8px;border-radius:50%;animation:pulse 1.6s ease-in-out infinite}
+
+/* ── Animações ───────────────────────────────────────────────── */
+@keyframes pulse{0%,100%{opacity:.5;transform:scale(1)}50%{opacity:1;transform:scale(1.25)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.fade-up{animation:fadeUp .3s ease both}
+
+/* ── Indicador de notificação ────────────────────────────────── */
+.notif-dot{width:8px;height:8px;border-radius:50%;background:var(--danger);border:2px solid var(--primary);position:absolute;top:2px;right:2px}
+
+/* ── Configurações M20 ───────────────────────────────────────── */
+.cfg-titulo{font-size:.9rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#555;margin-bottom:14px;margin-top:4px}
+
+/* Toggle switch */
+.cfg-toggle{position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0}
+.cfg-toggle input{opacity:0;width:0;height:0}
+.cfg-toggle-slider{position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:24px;transition:.25s}
+.cfg-toggle-slider::before{content:"";position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.25s}
+.cfg-toggle input:checked+.cfg-toggle-slider{background:var(--primary)}
+.cfg-toggle input:checked+.cfg-toggle-slider::before{transform:translateX(20px)}
+
+/* Card tema */
+.cfg-card-tema{border:2px solid #e0e0e0;border-radius:10px;padding:12px 16px;cursor:pointer;background:#fff;text-align:left;transition:border-color .15s}
+.cfg-card-tema.selecionado{border-color:var(--primary)}
+.cfg-card-tema.bloqueado{opacity:.55;cursor:not-allowed}
+.cfg-card-tema:not(:disabled):hover{border-color:var(--primary)}
+
+/* Card plano */
+.cfg-card-plano{transition:border-color .15s,background .15s}
+.cfg-card-plano:not(.selecionado):hover{border-color:var(--primary) !important}
+.cfg-card-plano.selecionado{border-color:var(--primary) !important;background:#faf3ef}
+
+/* ── Aliases mc-* (configuracoes.js + recibos.js) ───────────────────────────── */
+.mc-btn{padding:9px 18px;border-radius:10px;font-size:13.5px;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:opacity .15s,transform .1s;display:inline-flex;align-items:center;gap:6px}
+.mc-btn:active{transform:scale(.97)}
+.mc-btn-primary{background:var(--accent);color:#fff}
+.mc-btn-primary:hover{opacity:.9}
+.mc-btn-outline{background:rgba(0,0,0,.06);color:var(--text)}
+.mc-btn-outline:hover{background:rgba(0,0,0,.1)}
+.mc-input{width:100%;padding:10px 14px;border:1.5px solid rgba(0,0,0,.1);border-radius:10px;font-size:14px;font-family:inherit;color:var(--text);background:var(--surface);outline:none;transition:border-color .18s}
+.mc-input:focus{border-color:var(--accent)}
+.mc-input::placeholder{color:#bbb}
+label.mc-label{font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px}
+.mc-campo-grupo{display:flex;flex-direction:column;margin-bottom:2px}
+.mc-pills{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.mc-pill{padding:8px 18px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:all .15s;color:#888;background:none;white-space:nowrap;flex-shrink:0}
+.mc-pill.ativo,.mc-pill:hover{background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.mc-carregando{color:#888;font-size:14px;text-align:center}
+
+/* ── Responsivo mobile ───────────────────────────────────────── */
+@media(max-width:767px){
+  .form-row{grid-template-columns:1fr}
+  .tag{font-size:13px;padding:4px 12px}
+  .stat-grid{grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:16px}
+  .section-header{flex-wrap:wrap;gap:10px;margin-bottom:16px}
+  .section-header h2{font-size:22px;font-weight:700}
+  .pill-tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%;display:flex;padding:5px;background:rgba(0,0,0,.05);border-radius:14px}
+  .pill-tab{flex:1;text-align:center;padding:10px 12px;font-size:13.5px;border-radius:10px;white-space:nowrap}
+  .input{font-size:15px;padding:12px 16px;border-radius:12px}
+  .modal{max-width:94vw;padding:20px 16px;border-radius:16px}
+  .table{min-width:600px}
+}
